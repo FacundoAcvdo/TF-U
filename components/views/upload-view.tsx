@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Upload, FileText, Check, LoaderCircle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { datasetInfo } from '@/lib/mock-data'
@@ -11,8 +12,11 @@ export function UploadView() {
   const [archivo, setArchivo] = useState<string | null>(null)
   const [estado, setEstado] = useState<'idle' | 'cargando' | 'listo'>('idle')
   const [dragOver, setDragOver] = useState(false)
-  const [columnaTexto, setColumnaTexto] = useState('mensaje')
-  const [columnaFecha, setColumnaFecha] = useState('fecha')
+  const [columnaTexto, setColumnaTexto] = useState('')
+  const [columnaClase, setColumnaClase] = useState('');
+  const [sinClasificar, setSinClasificar] = useState(false);
+  const [esDeChat, setEsDeChat] = useState(false);
+  const [columnaFecha, setColumnaFecha] = useState('');
 
   function seleccionar(nombre: string) {
     setArchivo(nombre)
@@ -104,12 +108,35 @@ export function UploadView() {
               className="h-9 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
             />
           </label>
+
+          <label className="flex flex-col gap-1.5 text-sm font-medium">
+            Columna de clase
+            <input
+              value={columnaClase}
+              onChange={(e) => setColumnaClase(e.target.value)}
+              disabled={sinClasificar}
+              className="h-9 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </label>
+
+          <div className="flex items-center justify-between rounded-lg border border-input px-3 py-2">
+            <span className="text-sm font-medium">El archivo no está clasificado</span>
+            <Switch checked={sinClasificar} onCheckedChange={setSinClasificar} />
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border border-input px-3 py-2">
+            <span className="text-sm font-medium">El dataset proviene de un chat</span>
+            <Switch checked={esDeChat} onCheckedChange={setEsDeChat} />
+          </div>
+
           <label className="flex flex-col gap-1.5 text-sm font-medium">
             Columna de fecha
             <input
               value={columnaFecha}
               onChange={(e) => setColumnaFecha(e.target.value)}
-              className="h-9 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
+              disabled={!esDeChat}
+              placeholder=""
+              className="h-9 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </label>
 
