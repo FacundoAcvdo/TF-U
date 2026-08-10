@@ -21,7 +21,6 @@ import {
 export type ViewId =
   | 'cargar-dataset'
   | 'estadisticas'
-  | 'configurar-analisis'
   | 'embeddings'
   | 'nube-palabras'
   | 'emociones-negativas'
@@ -54,7 +53,6 @@ export const navGroups: NavGroup[] = [
     items: [
       { id: 'cargar-dataset', label: 'Cargar dataset', icon: Upload },
       { id: 'estadisticas', label: 'Estadísticas generales', icon: ChartColumn },
-      { id: 'configurar-analisis', label: 'Configurar análisis', icon: Settings },
     ],
   },
   {
@@ -101,10 +99,6 @@ export const viewMeta: Record<ViewId, { titulo: string; descripcion: string }> =
   estadisticas: {
     titulo: 'Estadísticas generales del dataset',
     descripcion: 'Resumen descriptivo del conjunto de datos cargado.',
-  },
-  'configurar-analisis': {
-    titulo: 'Configurar análisis del dataset',
-    descripcion: 'Elige qué modelos y parámetros se aplicarán en cada análisis.',
   },
   embeddings: {
     titulo: 'Visualización de embeddings',

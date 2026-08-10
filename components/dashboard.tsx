@@ -6,7 +6,6 @@ import { AppSidebar } from '@/components/app-sidebar'
 import { viewMeta, type ViewId } from '@/lib/navigation'
 import { UploadView } from '@/components/views/upload-view'
 import { StatsView } from '@/components/views/stats-view'
-import { ConfigView } from '@/components/views/config-view'
 import { EmbeddingsView } from '@/components/views/embeddings-view'
 import { WordCloudView } from '@/components/views/wordcloud-view'
 import { EmotionsView } from '@/components/views/emotions-view'
@@ -27,8 +26,6 @@ function renderView(id: ViewId) {
       return <UploadView />
     case 'estadisticas':
       return <StatsView />
-    case 'configurar-analisis':
-      return <ConfigView />
     case 'embeddings':
       return <EmbeddingsView />
     case 'nube-palabras':

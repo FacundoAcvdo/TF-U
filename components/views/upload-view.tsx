@@ -30,7 +30,7 @@ export function UploadView() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-5">
-      <Card className="lg:col-span-3">
+      <Card className="lg:col-span-3 max-h-[360px]">
         <CardHeader>
           <CardTitle>Seleccionar archivo</CardTitle>
         </CardHeader>
@@ -46,7 +46,7 @@ export function UploadView() {
               setDragOver(false)
               seleccionar(e.dataTransfer.files?.[0]?.name ?? 'dataset.csv')
             }}
-            className={`flex flex-col items-center gap-3 rounded-xl border-2 border-dashed p-10 text-center transition-colors ${
+            className={`flex flex-col items-center gap-3  rounded-xl border-2 border-dashed p-10 text-center transition-colors ${
               dragOver ? 'border-primary bg-primary/5' : 'border-border'
             }`}
           >
