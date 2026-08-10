@@ -206,11 +206,6 @@ export const historialChats: Chat[] = [
   { id: 'c4', titulo: 'Evolución del sentimiento negativo', tipo: 'Dataset', fecha: '21/07/2026', mensajes: 6 },
 ]
 
-export const informesGenerados = [
-  { id: 'r1', nombre: 'Informe mensual - Diciembre 2024', formato: 'PDF', fecha: '05/01/2025', tamano: '2.1 MB' },
-  { id: 'r2', nombre: 'Resumen de emociones negativas Q4', formato: 'PDF', fecha: '02/01/2025', tamano: '1.4 MB' },
-  { id: 'r3', nombre: 'Exportación de tópicos principales', formato: 'CSV', fecha: '28/12/2024', tamano: '640 KB' },
-]
 
 export const almacenamiento = {
   total: '3 GB',
