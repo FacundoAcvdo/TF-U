@@ -35,6 +35,7 @@ export type ViewId =
   | 'historial-chats'
   | 'informes'
   | 'usuarios'
+  | 'gestion-almacenamiento'
 
 export type NavItem = {
   id: ViewId
@@ -87,6 +88,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { id: 'informes', label: 'Generar informes', icon: FileText },
       { id: 'usuarios', label: 'Gestión de usuarios', icon: Users },
+      { id: 'gestion-almacenamiento', label: 'Gestión de almacenamiento', icon: Database },
     ],
   },
 ]
@@ -155,5 +157,9 @@ export const viewMeta: Record<ViewId, { titulo: string; descripcion: string }> =
   usuarios: {
     titulo: 'Gestión de usuarios',
     descripcion: 'Crea y elimina cuentas con acceso a la plataforma.',
+  },
+  'gestion-almacenamiento': {
+    titulo: 'Gestión de almacenamiento',
+    descripcion: 'Administra el espacio de almacenamiento disponible para los datos.',
   },
 }

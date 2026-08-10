@@ -5,8 +5,8 @@ import { Activity, Lock, Mail, LoaderCircle, ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export function LoginView({ onLogin }: { onLogin: (email: string) => void }) {
-  const [email, setEmail] = useState('elena.ruiz@instituto.org')
-  const [password, setPassword] = useState('demo1234')
+  const [email, setEmail] = useState('facevedo@unsl.edu.ar')
+  const [password, setPassword] = useState('abc123')
   const [cargando, setCargando] = useState(false)
 
   function handleSubmit(e: React.FormEvent) {
@@ -23,23 +23,20 @@ export function LoginView({ onLogin }: { onLogin: (email: string) => void }) {
           <span className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
             <Activity className="size-5" />
           </span>
-          <span className="text-sm font-semibold tracking-tight">Observatorio de Salud Mental</span>
+          <span className="text-sm font-semibold tracking-tight">TFU</span>
         </div>
 
         <div className="flex max-w-md flex-col gap-4">
           <h1 className="text-3xl font-semibold leading-tight tracking-tight text-balance lg:text-4xl">
-            Plataforma de análisis de datos para la prevención del suicidio
+            Plataforma de análisis de datos sobre el suicidio
           </h1>
           <p className="text-sm leading-relaxed text-sidebar-foreground/70 text-pretty">
             Herramienta de investigación para explorar patrones lingüísticos, emociones y niveles de
-            riesgo en corpus textuales, con el objetivo de apoyar tareas de prevención.
+            riesgo en corpus textuales, con el objetivo de apoyar tareas de prevención e investigación.
           </p>
         </div>
 
         <p className="flex items-start gap-2 text-xs leading-relaxed text-sidebar-foreground/60 text-pretty">
-          <ShieldAlert className="mt-0.5 size-4 shrink-0" />
-          Prototipo con fines de investigación. Si tú o alguien que conoces está en crisis, contacta con
-          los servicios de emergencia locales o una línea de ayuda de prevención del suicidio.
         </p>
       </section>
 
@@ -87,10 +84,6 @@ export function LoginView({ onLogin }: { onLogin: (email: string) => void }) {
             {cargando && <LoaderCircle className="animate-spin" />}
             {cargando ? 'Verificando…' : 'Entrar'}
           </Button>
-
-          <p className="text-center text-xs text-muted-foreground">
-            Credenciales de demostración precargadas. Este es un prototipo sin backend real.
-          </p>
         </form>
       </section>
     </main>

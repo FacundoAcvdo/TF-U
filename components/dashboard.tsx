@@ -19,6 +19,7 @@ import { ChatbotView } from '@/components/views/chatbot-view'
 import { ChatHistoryView } from '@/components/views/chat-history-view'
 import { ReportsView } from '@/components/views/reports-view'
 import { UsersView } from '@/components/views/users-view'
+import StorageManagementView from './views/storage-management-view'
 
 function renderView(id: ViewId) {
   switch (id) {
@@ -54,6 +55,8 @@ function renderView(id: ViewId) {
       return <ReportsView />
     case 'usuarios':
       return <UsersView />
+    case 'gestion-almacenamiento':
+      return <StorageManagementView />
   }
 }
 

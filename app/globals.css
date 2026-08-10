@@ -163,3 +163,16 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes progress-bar {
+  from {
+    width: 0%;
+  }
+  to {
+    width: var(--progress);
+  }
+}
+
+.animate-progress-bar {
+  animation: progress-bar 1s ease-out forwards;
+}
