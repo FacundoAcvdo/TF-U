@@ -220,3 +220,9 @@ export const archivosAlmacenados = [
   { id: 'f3', nombre: 'suicide_detection.csv', tipo: 'Dataset', fecha: '28/12/2024', tamano: 100, tamanoEmbeddings: 200, tamanoEmbeddingsChunked: 350, total: 650 },
 ]
 
+export const datasets = [
+  "foros_salud_mental_2024.csv",
+  "emociones_negativas_Q4.txt",
+  "suicide_detection.csv"
+]
+

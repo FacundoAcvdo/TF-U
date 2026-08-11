@@ -21,6 +21,17 @@ import { UsersView } from '@/components/views/users-view'
 import StorageManagementView from './views/storage-management-view'
 import CleaningView from './views/cleaning-view'
 
+import { datasets } from '@/lib/mock-data'
+
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox"
+
 function renderView(id: ViewId) {
   switch (id) {
     case 'cargar-dataset':
@@ -100,9 +111,28 @@ export function Dashboard({ userEmail, onLogout }: { userEmail: string; onLogout
           >
             {menuAbierto ? <X className="size-4" /> : <Menu className="size-4" />}
           </button>
-          <div className="flex min-w-0 flex-col">
-            <h1 className="truncate text-lg font-semibold tracking-tight text-balance">{meta.titulo}</h1>
-            <p className="hidden truncate text-sm text-muted-foreground sm:block">{meta.descripcion}</p>
+          <div className="flex flex-1 justify-between items-center gap-3">
+            <div className="flex min-w-0 flex-col">
+              <h1 className="truncate text-lg font-semibold tracking-tight text-balance">{meta.titulo}</h1>
+              <p className="hidden truncate text-sm text-muted-foreground sm:block">{meta.descripcion}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <p>Dataset:</p>
+              <Combobox items={datasets}>
+                <ComboboxInput placeholder="Selecciona un dataset" />
+                <ComboboxContent>
+                  <ComboboxEmpty>No hay datasets disponibles.</ComboboxEmpty>
+                  <ComboboxList>
+                    {(item) => (
+                      <ComboboxItem key={item} value={item}>
+                        {item}
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
+            </div>
+
           </div>
         </header>
 
