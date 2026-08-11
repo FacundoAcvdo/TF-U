@@ -35,7 +35,8 @@ export type ViewId =
   | 'informes'
   | 'usuarios'
   | 'gestion-almacenamiento'
-
+  | 'limpieza-datos'
+  
 export type NavItem = {
   id: ViewId
   label: string
@@ -53,6 +54,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { id: 'cargar-dataset', label: 'Cargar dataset', icon: Upload },
       { id: 'estadisticas', label: 'Estadísticas generales', icon: ChartColumn },
+      { id: 'limpieza-datos', label: 'Limpieza de datos', icon: Settings },
     ],
   },
   {
@@ -155,5 +157,9 @@ export const viewMeta: Record<ViewId, { titulo: string; descripcion: string }> =
   'gestion-almacenamiento': {
     titulo: 'Gestión de almacenamiento',
     descripcion: 'Administra el espacio de almacenamiento disponible para los datos.',
+  },
+  'limpieza-datos': {
+    titulo: 'Limpieza de datos',
+    descripcion: 'Aplica diferentes procesos de limpieza sobre el dataset cargado.',
   },
 }

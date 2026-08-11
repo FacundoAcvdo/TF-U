@@ -19,6 +19,7 @@ import { ChatHistoryView } from '@/components/views/chat-history-view'
 import { ReportsView } from '@/components/views/reports-view'
 import { UsersView } from '@/components/views/users-view'
 import StorageManagementView from './views/storage-management-view'
+import CleaningView from './views/cleaning-view'
 
 function renderView(id: ViewId) {
   switch (id) {
@@ -54,6 +55,8 @@ function renderView(id: ViewId) {
       return <UsersView />
     case 'gestion-almacenamiento':
       return <StorageManagementView />
+    case 'limpieza-datos':
+      return <CleaningView />
   }
 }
 
