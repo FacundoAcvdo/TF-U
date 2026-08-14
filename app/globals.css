@@ -176,3 +176,25 @@
 .animate-progress-bar {
   animation: progress-bar 1s ease-out forwards;
 }
+
+@layer utilities {
+  /* Ancho de la barra */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  /* Fondo o carril de la barra */
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+  /* El botoncito que se mueve */
+  ::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+  }
+  /* Color al pasar el cursor */
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+}

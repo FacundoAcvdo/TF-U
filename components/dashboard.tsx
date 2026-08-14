@@ -24,6 +24,17 @@ import CleaningView from './views/cleaning-view'
 import { datasets } from '@/lib/mock-data'
 
 import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+
+import {
   Combobox,
   ComboboxContent,
   ComboboxEmpty,
@@ -31,6 +42,9 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
+
+import { Button } from '@/components/ui/button'
+
 
 function renderView(id: ViewId) {
   switch (id) {
@@ -74,6 +88,8 @@ function renderView(id: ViewId) {
 export function Dashboard({ userEmail, onLogout }: { userEmail: string; onLogout: () => void }) {
   const [activo, setActivo] = useState<ViewId>('estadisticas')
   const [menuAbierto, setMenuAbierto] = useState(false)
+  const [datasetSeleccionado, setDatasetSeleccionado] = useState<string | null>(null)
+  const [dt, setdt] = useState<string | null>(null)
   const meta = viewMeta[activo]
 
   function seleccionar(id: ViewId) {
@@ -117,20 +133,36 @@ export function Dashboard({ userEmail, onLogout }: { userEmail: string; onLogout
               <p className="hidden truncate text-sm text-muted-foreground sm:block">{meta.descripcion}</p>
             </div>
             <div className="flex items-center gap-2">
-              <p>Dataset:</p>
-              <Combobox items={datasets}>
-                <ComboboxInput placeholder="Selecciona un dataset" />
-                <ComboboxContent>
-                  <ComboboxEmpty>No hay datasets disponibles.</ComboboxEmpty>
-                  <ComboboxList>
-                    {(item) => (
-                      <ComboboxItem key={item} value={item}>
-                        {item}
-                      </ComboboxItem>
-                    )}
-                  </ComboboxList>
-                </ComboboxContent>
-              </Combobox>
+              <Dialog>
+                <form className="w-full">
+                  <DialogTrigger render={<Button className="w-full h-10">{datasetSeleccionado || 'Seleccionar dataset'}</Button>} />
+                  <DialogContent className="sm:max-w-sm">
+                    <DialogHeader>
+                      <DialogTitle>Seleccionar dataset</DialogTitle>
+                      <DialogDescription>
+                        Selecciona el dataset con el que deseas realizar las funciones.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <Combobox items={datasets} value={datasetSeleccionado} onValueChange={setDatasetSeleccionado}>
+                      <ComboboxInput placeholder="Selecciona un dataset" />
+                      <ComboboxContent>
+                        <ComboboxEmpty>No hay datasets disponibles.</ComboboxEmpty>
+                        <ComboboxList>
+                          {(item) => (
+                            <ComboboxItem key={item} value={item}>
+                              {item}
+                            </ComboboxItem>
+                          )}
+                        </ComboboxList>
+                      </ComboboxContent>
+                    </Combobox>
+                    <DialogFooter>
+                      <DialogClose render={<Button>Seleccionar</Button>} />
+                      <DialogClose render={<Button variant="outline">Cancelar</Button>} />
+                    </DialogFooter>
+                  </DialogContent>
+                </form>
+              </Dialog>
             </div>
 
           </div>
