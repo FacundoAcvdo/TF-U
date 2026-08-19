@@ -9,10 +9,35 @@ export function LoginView({ onLogin }: { onLogin: (email: string) => void }) {
   const [password, setPassword] = useState('abc123')
   const [cargando, setCargando] = useState(false)
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setCargando(true)
-    window.setTimeout(() => onLogin(email), 900)
+
+    const response = await fetch('http://localhost:8080/auth/login', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email, password })
+    })
+
+    if (!response.ok) {
+      setCargando(false)
+      alert('Error al iniciar. Intenta nuevamente más tarde.')
+      return
+    }
+
+    const data = await response.json()
+
+    if (!data.user){
+      setCargando(false)
+      alert('Error al iniciar sesión. Por favor, verifica tus credenciales.')
+      return
+    }
+
+    setCargando(false)
+    onLogin(email)
   }
 
   return (
