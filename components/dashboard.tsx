@@ -21,8 +21,6 @@ import { UsersView } from '@/components/views/users-view'
 import StorageManagementView from './views/storage-management-view'
 import CleaningView from './views/cleaning-view'
 
-import { datasets } from '@/lib/mock-data'
-
 import {
   Dialog,
   DialogClose,
@@ -44,6 +42,7 @@ import {
 } from "@/components/ui/combobox"
 
 import { Button } from '@/components/ui/button'
+import { useDataset } from '@/context/dataset-provider'
 
 
 function renderView(id: ViewId) {
@@ -88,9 +87,9 @@ function renderView(id: ViewId) {
 export function Dashboard({ userEmail, onLogout }: { userEmail: string; onLogout: () => void }) {
   const [activo, setActivo] = useState<ViewId>('estadisticas')
   const [menuAbierto, setMenuAbierto] = useState(false)
-  const [datasetSeleccionado, setDatasetSeleccionado] = useState<string | null>(null)
-  const [dt, setdt] = useState<string | null>(null)
   const meta = viewMeta[activo]
+
+  const { datasetSeleccionado, setDatasetSeleccionado, datasets } = useDataset()
 
   function seleccionar(id: ViewId) {
     setActivo(id)
@@ -143,7 +142,7 @@ export function Dashboard({ userEmail, onLogout }: { userEmail: string; onLogout
                         Selecciona el dataset con el que deseas realizar las funciones.
                       </DialogDescription>
                     </DialogHeader>
-                    <Combobox items={datasets} value={datasetSeleccionado} onValueChange={setDatasetSeleccionado}>
+                    <Combobox items={datasets?.map((d) => d.dataset_name) || []} value={datasetSeleccionado} onValueChange={setDatasetSeleccionado}>
                       <ComboboxInput placeholder="Selecciona un dataset" />
                       <ComboboxContent>
                         <ComboboxEmpty>No hay datasets disponibles.</ComboboxEmpty>

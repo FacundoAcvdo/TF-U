@@ -4,10 +4,13 @@ import { Sparkles } from 'lucide-react'
 import { AnalysisRunner } from '@/components/analysis-runner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useEffect, useState } from 'react'
+import { useDataset } from '@/context/dataset-provider'
 
 export function EmbeddingsView() {
   const [estado, setEstado] = useState<'idle' | 'done' | 'running'>('idle')
   const [publicUrl, setPublicUrl] = useState<string | null>(null)
+
+  const { datasetSeleccionado } = useDataset()
 
   const ejecutarEmbeddings = async () => {
     setEstado('running')
@@ -16,7 +19,7 @@ export function EmbeddingsView() {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dataset: "Suicide_Detection.csv" }),
+      body: JSON.stringify({ dataset: datasetSeleccionado }),
     })
 
     if (!respuesta.ok) {
@@ -39,7 +42,7 @@ export function EmbeddingsView() {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ dataset: "Suicide_Detection.csv" }),
+          body: JSON.stringify({ dataset: datasetSeleccionado }),
         })
 
         if (!respuesta.ok) {
@@ -63,7 +66,7 @@ export function EmbeddingsView() {
     }
 
     fetchImage()
-  }, [])
+  }, [datasetSeleccionado])
 
   return (
     <AnalysisRunner

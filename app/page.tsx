@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { LoginView } from '@/components/login-view'
 import { Dashboard } from '@/components/dashboard'
+import { DatasetProvider } from '@/context/dataset-provider'
 
 export default function Page() {
   const [userEmail, setUserEmail] = useState<string | null>(null)
@@ -11,5 +12,5 @@ export default function Page() {
     return <LoginView onLogin={setUserEmail} />
   }
 
-  return <Dashboard userEmail={userEmail} onLogout={() => setUserEmail(null)} />
+  return <DatasetProvider><Dashboard userEmail={userEmail} onLogout={() => setUserEmail(null)} /></DatasetProvider>
 }
