@@ -16,12 +16,6 @@ export interface SubirDatasetResultado {
   datasetId: string
 }
 
-const API_BASE_URL = "http://localhost:8000"
-async function obtenerTokenSesion(): Promise<string | null> {
-  // aca busco el token de alguna forma
-  return null
-}
-
 export async function subirDataset(
   params: SubirDatasetParams
 ): Promise<SubirDatasetResultado> {
@@ -44,14 +38,10 @@ export async function subirDataset(
     formData.append("formatoDetectado", params.formatoDetectado)
   }
 
-  const token = await obtenerTokenSesion()
-  const INTERNAL_TOKEN = "test-secret-123"
-  const response = await fetch(`${API_BASE_URL}/datasets`, {
+  const response = await fetch(`http://localhost:8080/datasets`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${INTERNAL_TOKEN}`,
-      "X-User-Id": "usuario123",
-    },
+    credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
     body: formData,
   })
 
