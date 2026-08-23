@@ -42,8 +42,7 @@ import {
 } from "@/components/ui/combobox"
 
 import { Button } from '@/components/ui/button'
-import { useDataset } from '@/context/dataset-provider'
-
+import { useDataset, useDatasetsQuery } from '@/context/dataset-provider'
 
 function renderView(id: ViewId) {
   switch (id) {
@@ -89,7 +88,9 @@ export function Dashboard({ userEmail, onLogout }: { userEmail: string; onLogout
   const [menuAbierto, setMenuAbierto] = useState(false)
   const meta = viewMeta[activo]
 
-  const { datasetSeleccionado, setDatasetSeleccionado, datasets } = useDataset()
+  const { datasetSeleccionado, setDatasetSeleccionado} = useDataset()
+
+  const { data: datasets } = useDatasetsQuery() 
 
   function seleccionar(id: ViewId) {
     setActivo(id)

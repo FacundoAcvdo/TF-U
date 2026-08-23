@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 
 interface DatasetInfo {
@@ -12,48 +13,39 @@ interface DatasetInfo {
 interface DatasetContextType {
     datasetSeleccionado: string | null;
     setDatasetSeleccionado: (value: string | null) => void
-    
-    datasets: DatasetInfo[] | null;
-    setDatasets: (dataset: DatasetInfo[]) => void
 }
 
 const DatasetContext = createContext<DatasetContextType | undefined>(undefined);
 
+const fetchDatasets = async (): Promise<DatasetInfo[]> => {
+  const response = await fetch('http://localhost:8080/getDatasets', {
+    method: 'GET',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }
+  });
+  
+  if (!response.ok) throw new Error('Error al obtener los datasets');
+  
+  const data: { datasets: DatasetInfo[] } = await response.json();
+  return data.datasets;
+};
+
 export function DatasetProvider({ children }: { children: ReactNode }) {
   const [datasetSeleccionado, setDatasetSeleccionado] = useState<string | null>(null);
-  const [datasets, setDatasets] = useState<DatasetInfo[] | null>(null);  
+  
+  const { data: datasets } = useQuery({
+    queryKey: ['datasets'],
+    queryFn: fetchDatasets,
+  })
 
   useEffect(() => {
-    const fetchDatasets = async () => {
-        try {
-            const response = await fetch('http://localhost:8080/getDatasets', {
-              method: 'GET',
-              credentials: 'include',
-              headers: { 'Content-Type': 'application/json' }
-            })
-
-            if (!response.ok) {
-                throw new Error('Error al obtener los datasets')
-            }
-
-            const data: {datasets: DatasetInfo[]} = await response.json()
-            
-            setDatasets(data.datasets)
-
-            console.log('Datasets obtenidos:', data)
-
-            setDatasetSeleccionado(data.datasets.length > 0 ? data.datasets[0].dataset_name : null)
-        } catch (error) {
-            console.error('Error al obtener los datasets:', error)
-        }
+    if (datasets && datasets.length > 0 && !datasetSeleccionado) {
+      setDatasetSeleccionado(datasets[0].dataset_name);
     }
-
-    fetchDatasets()
-  }, []);
-
+  }, [datasets, datasetSeleccionado])
 
   return (
-    <DatasetContext.Provider value={{ datasetSeleccionado, setDatasetSeleccionado, datasets, setDatasets }}>
+    <DatasetContext.Provider value={{ datasetSeleccionado, setDatasetSeleccionado }}>
       {children}
     </DatasetContext.Provider>
   );
@@ -63,4 +55,11 @@ export function useDataset() {
   const context = useContext(DatasetContext);
   if (!context) throw new Error("useDataset debe usarse dentro de DatasetProvider");
   return context;
+}
+
+export function useDatasetsQuery() {
+  return useQuery<DatasetInfo[]>({
+    queryKey: ['datasets'],
+    queryFn: fetchDatasets, // 👈 Al ponerlo aquí, garantizas que la función siempre acompañe a la llave
+  });
 }

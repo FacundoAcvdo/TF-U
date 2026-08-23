@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query"
 import type {
   AutoConvertSourceFormat,
   DatasetOriginalFormat,
@@ -17,7 +18,8 @@ export interface SubirDatasetResultado {
 }
 
 export async function subirDataset(
-  params: SubirDatasetParams
+  params: SubirDatasetParams,
+  queryClient: ReturnType<typeof useQueryClient>
 ): Promise<SubirDatasetResultado> {
   const formData = new FormData()
 
@@ -41,7 +43,6 @@ export async function subirDataset(
   const response = await fetch(`http://localhost:8080/datasets`, {
     method: "POST",
     credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
     body: formData,
   })
 
@@ -53,6 +54,8 @@ export async function subirDataset(
         `No se pudo subir el dataset (status ${response.status})`
     )
   }
+
+  queryClient.invalidateQueries({ queryKey: ['datasets'] })
 
   return response.json()
 }
