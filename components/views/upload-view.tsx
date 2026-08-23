@@ -47,6 +47,7 @@ import { obtenerFormatoOriginal } from '@/lib/dataset/autoConvert'
 import { subirDataset } from '@/lib/dataset/upload'
 
 import { DatasetPreview } from '@/components/dataset/DatasetPreview'
+import { useQueryClient } from '@tanstack/react-query'
 
 type PosiblePreviewAutoConvertido = DatasetPreviewData & {
   sourceFormat?: AutoConvertSourceFormat
@@ -94,6 +95,8 @@ function tipoArchivoEspecial(file: File): TipoArchivoEspecial | null {
 }
 
 export function UploadView() {
+  const queryClient = useQueryClient()
+
   const [archivo, setArchivo] = useState<File | null>(null)
 
   const [preview, setPreview] =
@@ -282,7 +285,7 @@ export function UploadView() {
         columnaFecha: esDeChat ? columnaFecha || null : null,
         formatoOriginal,
         formatoDetectado: formatoAutomatico,
-      })
+      }, queryClient)
 
       setEstado('listo')
     } catch (err) {
