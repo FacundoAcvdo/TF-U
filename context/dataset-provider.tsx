@@ -18,7 +18,7 @@ interface DatasetContextType {
 const DatasetContext = createContext<DatasetContextType | undefined>(undefined);
 
 const fetchDatasets = async (): Promise<DatasetInfo[]> => {
-  const response = await fetch('http://localhost:8080/getDatasets', {
+  const response = await fetch('http://localhost:8080/dataset/getDatasets', {
     method: 'GET',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' }

@@ -40,7 +40,7 @@ export async function subirDataset(
     formData.append("formatoDetectado", params.formatoDetectado)
   }
 
-  const response = await fetch(`http://localhost:8080/datasets`, {
+  const response = await fetch(`http://localhost:8080/dataset/uploadDataset`, {
     method: "POST",
     credentials: 'include',
     body: formData,

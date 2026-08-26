@@ -15,7 +15,7 @@ export function EmbeddingsView() {
   const ejecutarEmbeddings = async () => {
     setEstado('running')
 
-    const respuesta = await fetch('http://localhost:8080/cluster', {
+    const respuesta = await fetch('http://localhost:8080/clustering/visualizeEmbeddings', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -38,7 +38,7 @@ export function EmbeddingsView() {
       try {
         setEstado('running')
 
-        const respuesta = await fetch('http://localhost:8080/getClusteringImage', {
+        const respuesta = await fetch('http://localhost:8080/clustering/getEmbeddingsImage', {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
