@@ -6,7 +6,6 @@ import { AppSidebar } from '@/components/app-sidebar'
 import { viewMeta, type ViewId } from '@/lib/navigation'
 import { UploadView } from '@/components/views/upload-view'
 import { StatsView } from '@/components/views/stats-view'
-import { ConfigView } from '@/components/views/config-view'
 import { EmbeddingsView } from '@/components/views/embeddings-view'
 import { WordCloudView } from '@/components/views/wordcloud-view'
 import { EmotionsView } from '@/components/views/emotions-view'
@@ -19,6 +18,31 @@ import { ChatbotView } from '@/components/views/chatbot-view'
 import { ChatHistoryView } from '@/components/views/chat-history-view'
 import { ReportsView } from '@/components/views/reports-view'
 import { UsersView } from '@/components/views/users-view'
+import StorageManagementView from './views/storage-management-view'
+import CleaningView from './views/cleaning-view'
+
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox"
+
+import { Button } from '@/components/ui/button'
+import { useDataset, useDatasetsQuery } from '@/context/dataset-provider'
 
 function renderView(id: ViewId) {
   switch (id) {
@@ -26,8 +50,6 @@ function renderView(id: ViewId) {
       return <UploadView />
     case 'estadisticas':
       return <StatsView />
-    case 'configurar-analisis':
-      return <ConfigView />
     case 'embeddings':
       return <EmbeddingsView />
     case 'nube-palabras':
@@ -54,6 +76,10 @@ function renderView(id: ViewId) {
       return <ReportsView />
     case 'usuarios':
       return <UsersView />
+    case 'gestion-almacenamiento':
+      return <StorageManagementView />
+    case 'limpieza-datos':
+      return <CleaningView />
   }
 }
 
@@ -61,6 +87,10 @@ export function Dashboard({ userEmail, onLogout }: { userEmail: string; onLogout
   const [activo, setActivo] = useState<ViewId>('estadisticas')
   const [menuAbierto, setMenuAbierto] = useState(false)
   const meta = viewMeta[activo]
+
+  const { datasetSeleccionado, setDatasetSeleccionado} = useDataset()
+
+  const { data: datasets } = useDatasetsQuery() 
 
   function seleccionar(id: ViewId) {
     setActivo(id)
@@ -97,9 +127,44 @@ export function Dashboard({ userEmail, onLogout }: { userEmail: string; onLogout
           >
             {menuAbierto ? <X className="size-4" /> : <Menu className="size-4" />}
           </button>
-          <div className="flex min-w-0 flex-col">
-            <h1 className="truncate text-lg font-semibold tracking-tight text-balance">{meta.titulo}</h1>
-            <p className="hidden truncate text-sm text-muted-foreground sm:block">{meta.descripcion}</p>
+          <div className="flex flex-1 justify-between items-center gap-3">
+            <div className="flex min-w-0 flex-col">
+              <h1 className="truncate text-lg font-semibold tracking-tight text-balance">{meta.titulo}</h1>
+              <p className="hidden truncate text-sm text-muted-foreground sm:block">{meta.descripcion}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Dialog>
+                <form className="w-full">
+                  <DialogTrigger render={<Button className="w-full h-10">{datasetSeleccionado || 'Seleccionar dataset'}</Button>} />
+                  <DialogContent className="sm:max-w-sm">
+                    <DialogHeader>
+                      <DialogTitle>Seleccionar dataset</DialogTitle>
+                      <DialogDescription>
+                        Selecciona el dataset con el que deseas realizar las funciones.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <Combobox items={datasets?.map((d) => d.dataset_name) || []} value={datasetSeleccionado} onValueChange={setDatasetSeleccionado}>
+                      <ComboboxInput placeholder="Selecciona un dataset" />
+                      <ComboboxContent>
+                        <ComboboxEmpty>No hay datasets disponibles.</ComboboxEmpty>
+                        <ComboboxList>
+                          {(item) => (
+                            <ComboboxItem key={item} value={item}>
+                              {item}
+                            </ComboboxItem>
+                          )}
+                        </ComboboxList>
+                      </ComboboxContent>
+                    </Combobox>
+                    <DialogFooter>
+                      <DialogClose render={<Button>Seleccionar</Button>} />
+                      <DialogClose render={<Button variant="outline">Cancelar</Button>} />
+                    </DialogFooter>
+                  </DialogContent>
+                </form>
+              </Dialog>
+            </div>
+
           </div>
         </header>
 

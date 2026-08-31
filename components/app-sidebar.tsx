@@ -22,7 +22,7 @@ export function AppSidebar({
           <Activity className="size-4" />
         </span>
         <div className="flex min-w-0 flex-col">
-          <span className="truncate text-sm font-semibold leading-tight">Observatorio</span>
+          <span className="truncate text-sm font-semibold leading-tight">TFU</span>
           <span className="truncate text-xs text-sidebar-foreground/60">Análisis de datos</span>
         </div>
       </div>

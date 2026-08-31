@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { LoginView } from '@/components/login-view'
 import { Dashboard } from '@/components/dashboard'
+import { Providers } from '@/context/providers'
 
 export default function Page() {
   const [userEmail, setUserEmail] = useState<string | null>(null)
@@ -11,5 +12,5 @@ export default function Page() {
     return <LoginView onLogin={setUserEmail} />
   }
 
-  return <Dashboard userEmail={userEmail} onLogout={() => setUserEmail(null)} />
+  return <Providers><Dashboard userEmail={userEmail} onLogout={() => setUserEmail(null)} /></Providers>
 }

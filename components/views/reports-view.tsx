@@ -5,22 +5,31 @@ import { FileText, Download, LoaderCircle, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { informesGenerados } from '@/lib/mock-data'
 
 const secciones = [
   'Estadísticas generales',
-  'Emociones negativas',
+  'Nube de palabras',
   'Tópicos principales',
   'Nivel de riesgo',
   'Sentimiento en el tiempo',
-  'Menciones de suicidio',
+  'Evolución de palabras en el tiempo',
+  'Visualización de embeddings',
+  'Chats del chatbot',
+  'Emociones negativas',
 ]
+
+interface Informe {
+  id: string
+  nombre: string
+  formato: string
+  fecha: string
+  tamano: string
+}
 
 export function ReportsView() {
   const [seleccion, setSeleccion] = useState<string[]>(secciones.slice(0, 4))
-  const [formato, setFormato] = useState('PDF')
   const [estado, setEstado] = useState<'idle' | 'generando' | 'listo'>('idle')
-  const [informes, setInformes] = useState(informesGenerados)
+  const [informe, setInforme] = useState<Informe | undefined>(undefined)
 
   function toggle(s: string) {
     setSeleccion((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
@@ -31,22 +40,19 @@ export function ReportsView() {
     setEstado('generando')
     window.setTimeout(() => {
       setEstado('listo')
-      setInformes((prev) => [
-        {
-          id: `r${Date.now()}`,
-          nombre: `Informe personalizado (${seleccion.length} secciones)`,
-          formato,
-          fecha: new Date().toLocaleDateString('es'),
-          tamano: '1.8 MB',
-        },
-        ...prev,
-      ])
+      setInforme({
+        id: `r${Date.now()}`,
+        nombre: `Informe personalizado (${seleccion.length} secciones)`,
+        formato: 'PDF',
+        fecha: new Date().toLocaleDateString('es'),
+        tamano: '1.8 MB',
+      })
     }, 1400)
   }
 
   return (
     <div className="grid gap-4 lg:grid-cols-5">
-      <Card className="lg:col-span-3">
+      <Card className="lg:col-span-5">
         <CardHeader>
           <CardTitle>Nuevo informe</CardTitle>
           <CardDescription>Selecciona las secciones que quieres incluir y genera el documento.</CardDescription>
@@ -76,21 +82,8 @@ export function ReportsView() {
             })}
           </div>
 
-          <label className="flex max-w-[200px] flex-col gap-1.5 text-sm font-medium">
-            Formato de salida
-            <select
-              value={formato}
-              onChange={(e) => setFormato(e.target.value)}
-              className="h-9 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
-            >
-              <option>PDF</option>
-              <option>CSV</option>
-              <option>HTML</option>
-            </select>
-          </label>
-
-          <div className="flex items-center gap-3">
-            <Button onClick={generar} disabled={seleccion.length === 0 || estado === 'generando'}>
+          <div className="flex flex-col items-center gap-3">
+            <Button onClick={generar} disabled={seleccion.length === 0 || estado === 'generando'} className="w-full h-10">
               {estado === 'generando' ? <LoaderCircle className="animate-spin" /> : <FileText />}
               {estado === 'generando' ? 'Generando…' : 'Generar informe'}
             </Button>
@@ -103,28 +96,27 @@ export function ReportsView() {
         </CardContent>
       </Card>
 
-      <Card className="lg:col-span-2">
+      {informe && (
+      <Card className="lg:col-span-5">
         <CardHeader>
-          <CardTitle>Informes generados</CardTitle>
+          <CardTitle>Informe generado</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2.5">
-          {informes.map((r) => (
-            <div key={r.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
+            <div key={informe.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
               <FileText className="size-4 text-primary" />
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="truncate text-sm font-medium">{r.nombre}</span>
+                <span className="truncate text-sm font-medium">{informe.nombre}</span>
                 <span className="text-xs text-muted-foreground">
-                  {r.fecha} · {r.tamano}
+                  {informe.fecha} · {informe.tamano}
                 </span>
               </div>
-              <Badge variant="secondary">{r.formato}</Badge>
+              <Badge variant="secondary">{informe.formato}</Badge>
               <Button variant="ghost" size="icon-sm" aria-label="Descargar informe">
                 <Download />
               </Button>
             </div>
-          ))}
         </CardContent>
-      </Card>
+      </Card>)}
     </div>
   )
 }

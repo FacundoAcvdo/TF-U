@@ -21,7 +21,6 @@ import {
 export type ViewId =
   | 'cargar-dataset'
   | 'estadisticas'
-  | 'configurar-analisis'
   | 'embeddings'
   | 'nube-palabras'
   | 'emociones-negativas'
@@ -35,7 +34,9 @@ export type ViewId =
   | 'historial-chats'
   | 'informes'
   | 'usuarios'
-
+  | 'gestion-almacenamiento'
+  | 'limpieza-datos'
+  
 export type NavItem = {
   id: ViewId
   label: string
@@ -53,7 +54,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { id: 'cargar-dataset', label: 'Cargar dataset', icon: Upload },
       { id: 'estadisticas', label: 'Estadísticas generales', icon: ChartColumn },
-      { id: 'configurar-analisis', label: 'Configurar análisis', icon: Settings },
+      { id: 'limpieza-datos', label: 'Limpieza de datos', icon: Settings },
     ],
   },
   {
@@ -87,6 +88,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { id: 'informes', label: 'Generar informes', icon: FileText },
       { id: 'usuarios', label: 'Gestión de usuarios', icon: Users },
+      { id: 'gestion-almacenamiento', label: 'Gestión de almacenamiento', icon: Database },
     ],
   },
 ]
@@ -99,10 +101,6 @@ export const viewMeta: Record<ViewId, { titulo: string; descripcion: string }> =
   estadisticas: {
     titulo: 'Estadísticas generales del dataset',
     descripcion: 'Resumen descriptivo del conjunto de datos cargado.',
-  },
-  'configurar-analisis': {
-    titulo: 'Configurar análisis del dataset',
-    descripcion: 'Elige qué modelos y parámetros se aplicarán en cada análisis.',
   },
   embeddings: {
     titulo: 'Visualización de embeddings',
@@ -155,5 +153,13 @@ export const viewMeta: Record<ViewId, { titulo: string; descripcion: string }> =
   usuarios: {
     titulo: 'Gestión de usuarios',
     descripcion: 'Crea y elimina cuentas con acceso a la plataforma.',
+  },
+  'gestion-almacenamiento': {
+    titulo: 'Gestión de almacenamiento',
+    descripcion: 'Administra el espacio de almacenamiento disponible para los datos.',
+  },
+  'limpieza-datos': {
+    titulo: 'Limpieza de datos',
+    descripcion: 'Aplica diferentes procesos de limpieza sobre el dataset cargado.',
   },
 }

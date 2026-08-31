@@ -206,8 +206,23 @@ export const historialChats: Chat[] = [
   { id: 'c4', titulo: 'Evolución del sentimiento negativo', tipo: 'Dataset', fecha: '21/07/2026', mensajes: 6 },
 ]
 
-export const informesGenerados = [
-  { id: 'r1', nombre: 'Informe mensual - Diciembre 2024', formato: 'PDF', fecha: '05/01/2025', tamano: '2.1 MB' },
-  { id: 'r2', nombre: 'Resumen de emociones negativas Q4', formato: 'PDF', fecha: '02/01/2025', tamano: '1.4 MB' },
-  { id: 'r3', nombre: 'Exportación de tópicos principales', formato: 'CSV', fecha: '28/12/2024', tamano: '640 KB' },
+
+export const almacenamiento = {
+  total: '3 GB',
+  usado: '1.18 GB',
+  disponible: '1.82 GB',
+  porcentajeUsado: 39.3,
+}
+
+export const archivosAlmacenados = [
+  { id: 'f1', nombre: 'foros_salud_mental_2024.csv', tipo: 'Dataset', fecha: '27/07/2026', tamano: 50, tamanoEmbeddings: 150, tamanoEmbeddingsChunked: 175, total: 375 },
+  { id: 'f2', nombre: 'emociones_negativas_Q4.txt', tipo: 'Dataset', fecha: '02/01/2025', tamano: 70, tamanoEmbeddings: 50, tamanoEmbeddingsChunked: 70, total: 190 },
+  { id: 'f3', nombre: 'suicide_detection.csv', tipo: 'Dataset', fecha: '28/12/2024', tamano: 100, tamanoEmbeddings: 200, tamanoEmbeddingsChunked: 350, total: 650 },
 ]
+
+export const datasets = [
+  "foros_salud_mental_2024.csv",
+  "emociones_negativas_Q4.txt",
+  "suicide_detection.csv"
+]
+
