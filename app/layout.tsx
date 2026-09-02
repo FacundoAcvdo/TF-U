@@ -12,8 +12,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'Análisis de Datos sobre Suicidio | Plataforma de Investigación',
   description:
-    'Plataforma de investigación para el análisis de datos textuales relacionados con la prevención del suicidio: emociones, tópicos, riesgo y más.',
-  generator: 'v0.app',
+    'Plataforma de investigación para el análisis de datos textuales relacionados con la prevención del suicidio: emociones, tópicos, riesgo y más.'
 }
 
 export const viewport: Viewport = {

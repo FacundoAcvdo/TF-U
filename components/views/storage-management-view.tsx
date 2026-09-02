@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useEffect, useState } from 'react'
 import { almacenamiento, archivosAlmacenados } from '@/lib/mock-data'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'

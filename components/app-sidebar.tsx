@@ -1,20 +1,26 @@
 'use client'
 
+import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
 import { Activity, LogOut } from 'lucide-react'
-import { navGroups, type ViewId } from '@/lib/navigation'
+import { navGroups } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
 
 export function AppSidebar({
-  activo,
-  onSelect,
-  onLogout,
-  userEmail,
+  userEmail = 'usuario@demo.local',
 }: {
-  activo: ViewId
-  onSelect: (id: ViewId) => void
-  onLogout: () => void
-  userEmail: string
+  userEmail?: string
 }) {
+  const pathname = usePathname()
+  const router = useRouter()
+
+  async function handleLogout() {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } catch {}
+    router.push('/login')
+    router.refresh()
+  }
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex items-center gap-2.5 px-5 py-5">
@@ -35,11 +41,11 @@ export function AppSidebar({
             </p>
             {grupo.items.map((item) => {
               const Icon = item.icon
-              const seleccionado = activo === item.id
+              const seleccionado = pathname === item.href || pathname?.startsWith(item.href + '/')
               return (
-                <button
+                <Link
                   key={item.id}
-                  onClick={() => onSelect(item.id)}
+                  href={item.href}
                   aria-current={seleccionado ? 'page' : undefined}
                   className={cn(
                     'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors',
@@ -50,7 +56,7 @@ export function AppSidebar({
                 >
                   <Icon className="size-4 shrink-0" />
                   <span className="truncate">{item.label}</span>
-                </button>
+                </Link>
               )
             })}
           </div>
@@ -65,7 +71,7 @@ export function AppSidebar({
           <span className="min-w-0 flex-1 truncate text-xs text-sidebar-foreground/70">{userEmail}</span>
         </div>
         <button
-          onClick={onLogout}
+          onClick={handleLogout}
           className="mt-1 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         >
           <LogOut className="size-4 shrink-0" />
