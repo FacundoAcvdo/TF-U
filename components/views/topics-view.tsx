@@ -42,6 +42,42 @@ type TopicModelingResult = {
   topics: TopicModelingTopic[]
 }
 
+function ExpandableDocument({ 
+  document, 
+  index 
+}: { 
+  document: { document_id: string; text: string }
+  index: number 
+}) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const MAX_CHARS = 275
+
+  const isLong = document.text.length > MAX_CHARS
+  const displayedText = isExpanded || !isLong 
+    ? document.text 
+    : `${document.text.slice(0, MAX_CHARS)} ...`
+
+  return (
+    <div className="rounded-lg border bg-muted/20 p-3">
+      <div className="mb-1 text-xs font-semibold text-muted-foreground">
+        Documento {index + 1}
+      </div>
+      <p className="text-xs leading-relaxed break-words">
+        {displayedText}
+      </p>
+      {isLong && (
+        <button
+          type="button"
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="mt-1 text-xs font-semibold text-primary hover:underline"
+        >
+          {isExpanded ? 'Ver menos' : 'Ver más'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 export function TopicsView() {
   const [estado, setEstado] = useState<
     'idle' | 'done' | 'running'
@@ -96,10 +132,6 @@ export function TopicsView() {
     >
       {topics && (
         <div className="space-y-6">
-
-          {/* =========================
-              SUMMARY
-          ========================== */}
 
           <div className="grid gap-4 md:grid-cols-3">
 
@@ -159,10 +191,6 @@ export function TopicsView() {
 
           </div>
 
-          {/* =========================
-              TOPIC RANKING
-          ========================== */}
-
           <Card>
             <CardHeader>
               <CardTitle>Principales tópicos</CardTitle>
@@ -192,10 +220,6 @@ export function TopicsView() {
             </CardContent>
           </Card>
 
-          {/* =========================
-              TOPIC DIALOG
-          ========================== */}
-
           <Dialog
             open={selectedTopic !== undefined}
             onOpenChange={(open) => {
@@ -205,100 +229,62 @@ export function TopicsView() {
             }}
           >
             {selectedTopic && (
-              <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-
+              <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
                 <DialogHeader>
                   <div className="flex items-start gap-4 pr-8">
                     <div className="min-w-0 flex-1">
-
                       <div className="flex items-center gap-3">
-                        <DialogTitle>
-                          Topic {selectedTopic.topic_id + 1}
-                        </DialogTitle>
-
+                        <DialogTitle>Topic {selectedTopic.topic_id + 1}</DialogTitle>
                         <Badge variant="secondary">
                           {selectedTopic.percentage.toFixed(1)}%
                         </Badge>
                       </div>
-
                       <DialogDescription className="mt-1">
-                        {selectedTopic.document_count.toLocaleString()}{' '}
-                        documentos pertenecen a este tópico.
+                        {selectedTopic.document_count.toLocaleString()} documentos pertenecen a este tópico.
                       </DialogDescription>
-
                     </div>
                   </div>
                 </DialogHeader>
 
-                <div className="space-y-6 pt-2">
-
-                  {/* Términos */}
-
+                <div className="space-y-4 pt-2">
                   <div>
-                    <h4 className="mb-3 text-sm font-medium">
-                      Términos representativos
-                    </h4>
-
-                    <div className="flex flex-wrap gap-2">
+                    <h4 className="mb-2 text-sm font-medium">Términos representativos</h4>
+                    <div className="flex flex-wrap gap-1.5">
                       {selectedTopic.keywords.map((keyword) => (
-                        <Badge
-                          key={keyword}
-                          variant="outline"
-                        >
+                        <Badge key={keyword} variant="outline" className="text-xs">
                           {keyword}
                         </Badge>
                       ))}
                     </div>
                   </div>
 
-                  {/* Documentos */}
-
                   <div>
-                    <div className="mb-3">
-                      <h4 className="text-sm font-medium">
-                        Documentos representativos
-                      </h4>
-
+                    <div className="mb-2">
+                      <h4 className="text-sm font-medium">Documentos representativos</h4>
                       <p className="text-xs text-muted-foreground">
                         Algunos documentos representativos de este tópico.
                       </p>
                     </div>
 
                     <div className="space-y-3">
-                      {selectedTopic.representative_documents.map(
-                        (document) => (
-                          <div
-                            key={document.document_id}
-                            className="rounded-lg border bg-muted/20 p-4"
-                          >
-                            <div className="mb-2 text-xs font-medium text-muted-foreground">
-                              {document.document_id}
-                            </div>
-
-                            <p className="text-sm leading-relaxed">
-                              {document.text}
-                            </p>
-                          </div>
-                        )
-                      )}
+                      {selectedTopic.representative_documents.map((document, index) => (
+                        <ExpandableDocument
+                          key={document.document_id}
+                          document={document}
+                          index={index}
+                        />
+                      ))}
                     </div>
                   </div>
-
                 </div>
-
               </DialogContent>
             )}
           </Dialog>
-
         </div>
       )}
     </AnalysisRunner>
   )
 }
-
-/* =====================================================
-   TOPIC RANKING
-===================================================== */
 
 function TopicRanking({
   topic,
@@ -327,8 +313,6 @@ function TopicRanking({
     >
       <div className="flex items-center gap-4">
 
-        {/* Rank */}
-
         <div
           className={[
             'flex size-9 shrink-0 items-center justify-center rounded-md',
@@ -340,8 +324,6 @@ function TopicRanking({
         >
           {topic.topic_id + 1}
         </div>
-
-        {/* Topic info */}
 
         <div className="min-w-0 flex-1">
 
@@ -360,8 +342,6 @@ function TopicRanking({
 
           </div>
 
-          {/* Progress */}
-
           <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
             <div
               className="h-full rounded-full bg-primary transition-all"
@@ -370,8 +350,6 @@ function TopicRanking({
               }}
             />
           </div>
-
-          {/* Keywords */}
 
           <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1">
             {topic.keywords.slice(0, 6).map((keyword) => (
