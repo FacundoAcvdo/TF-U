@@ -21,11 +21,26 @@ import {
 } from '@/components/ui/dialog'
 
 import { useDataset } from '@/context/dataset-provider'
-import {
-  mockTopicModeling,
-  type TopicModelingResult,
-  type TopicModelingTopic,
-} from '@/lib/mock-data'
+
+type TopicModelingDocument = {
+  document_id: string
+  text: string
+}
+
+type TopicModelingTopic = {
+  topic_id: number
+  document_count: number
+  percentage: number
+  keywords: string[]
+  representative_documents: TopicModelingDocument[]
+}
+
+type TopicModelingResult = {
+  document_count: number
+  topic_count: number
+  outlier_percentage: number
+  topics: TopicModelingTopic[]
+}
 
 export function TopicsView() {
   const [estado, setEstado] = useState<
@@ -43,12 +58,20 @@ export function TopicsView() {
   const ejecutarTopicModeling = async () => {
     setEstado('running')
 
-    // Mock temporal.
-    await new Promise((resolve) =>
-      setTimeout(resolve, 800)
-    )
+    const respuesta = await fetch('http://localhost:8080/topicmodeling/getTopics', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataset: datasetSeleccionado }),
+    })
 
-    setTopics(mockTopicModeling)
+    if (!respuesta.ok) {
+      console.error('Error al obtener topicos principales:', respuesta.statusText)
+      setEstado('idle')
+      return
+    }
+
+    setTopics(respuesta.ok ? await respuesta.json() : null)
 
     setEstado('done')
   }
