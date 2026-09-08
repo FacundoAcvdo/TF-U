@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ShieldAlert, Download, FileCode2, RotateCcw, Database } from 'lucide-react'
+import { ShieldAlert, Download, FileCode2, Settings2, Database } from 'lucide-react'
 import { AnalysisRunner } from '@/components/analysis-runner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useDataset } from '@/context/dataset-provider'
 
 const opciones = [
   'Validación Cruzada',
@@ -46,6 +47,7 @@ type ResumenMenciones = {
 }
 
 export function MentionView() {
+  const [estado, setEstado] = useState<'idle' | 'done' | 'running'>('idle')
   const [modeloSeleccionado, setModeloSeleccionado] = useState<string>(modelos[0])
   const [metodoDeEntrenamiento, setMetodoDeEntrenamiento] = useState<string | null>(opciones[0])
   const [valorK, setValorK] = useState<string | null>(tamañoK[0])
@@ -54,16 +56,22 @@ export function MentionView() {
   const [modeloDescargaUrl, setModeloDescargaUrl] = useState<string | null>(null)
   const [nombreArchivo, setNombreArchivo] = useState<string>('modelo.pt')
 
+  const { datasetSeleccionado } = useDataset()
+
   const porcentajeEntrenamiento = porcentajeTrain[0] ?? 50
   const porcentajePrueba = 100 - porcentajeEntrenamiento
 
   const handleReset = () => {
     setResultado(null)
     setModeloDescargaUrl(null)
+    setEstado('idle')
   }
 
-  const funcion = async () => {
+  const ejecutarDeteccion = async () => {
+    setEstado('running')
+
     const body = {
+      dataset: datasetSeleccionado,
       modelo: modeloSeleccionado,
       modo: metodoDeEntrenamiento === 'Validación Cruzada' ? 'validacion_cruzada' : 'porcentajes',
       ...(metodoDeEntrenamiento === 'Validación Cruzada'
@@ -75,24 +83,28 @@ export function MentionView() {
     }
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/detectar_menciones', {
+      const res = await fetch('http://localhost:8080/clasificacion/detectar_menciones', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => null)
-        throw new Error(errorData?.detail ?? 'Error al detectar menciones')
+        console.error('Error al detectar menciones:', errorData?.detail ?? res.statusText)
+        setEstado('idle')
+        return
       }
 
       const data = await res.json()
       setResultado(data.resumen)
       setModeloDescargaUrl(`data:application/octet-stream;base64,${data.archivo_base64}`)
       setNombreArchivo(data.nombre_archivo)
+      setEstado('done')
     } catch (error) {
-      console.error('Error al detectar menciones:', error)
-      alert('Ocurrió un error al detectar menciones. Por favor, inténtelo de nuevo.')
+      console.error('Error de conexión al detectar menciones:', error)
+      setEstado('idle')
     }
   }
 
@@ -116,9 +128,6 @@ export function MentionView() {
               <CardTitle className="text-base font-semibold">
                 Configuración de análisis
               </CardTitle>
-              {resultado && (
-                <span className="text-xs text-muted-foreground">(Bloqueado)</span>
-              )}
             </div>
 
             {resultado && (
@@ -128,8 +137,8 @@ export function MentionView() {
                 className="gap-1.5 text-xs h-8 cursor-pointer"
                 onClick={handleReset}
               >
-                <RotateCcw className="h-3.5 w-3.5" />
-                Volver a ejecutar
+                <Settings2 className="h-3.5 w-3.5" />
+                Cambiar Configuración
               </Button>
             )}
           </CardHeader>
@@ -237,21 +246,27 @@ export function MentionView() {
           <AnalysisRunner
             icon={ShieldAlert}
             runLabel="Detectar menciones"
-            idleHint="Clasifica cada mensaje como posible mención de ideación suicida mediante un modelo entrenado, indicando el nivel de confianza."
-            ejecutarFuncion={funcion}
+            idleHint="Entrena un clasificador con tu dataset, evalúa su matriz de confusión y descarga el modelo resultante."
+            estado={estado}
+            ejecutarFuncion={ejecutarDeteccion}
           >
             <div />
           </AnalysisRunner>
         ) : (
           <Card className="w-full shadow-sm">
             <CardHeader className="pb-3 border-b">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
                 <CardTitle className="text-sm font-semibold">
                   Resultados del análisis
                 </CardTitle>
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-md">
                   <Database className="h-3.5 w-3.5" />
-                  <span>Muestras procesadas: <strong className="text-foreground">{resultado.total_muestras.toLocaleString()}</strong></span>
+                  <span>
+                    Muestras procesadas:{' '}
+                    <strong className="text-foreground">
+                      {resultado.total_muestras.toLocaleString()}
+                    </strong>
+                  </span>
                 </div>
               </div>
             </CardHeader>
@@ -260,19 +275,25 @@ export function MentionView() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full text-center">
                 <div className="p-2.5 rounded-lg bg-muted/20 border text-xs">
                   <span className="text-muted-foreground block text-[11px]">Total Dataset</span>
-                  <strong className="text-foreground text-sm">{resultado.total_muestras.toLocaleString()}</strong>
+                  <strong className="text-foreground text-sm">
+                    {resultado.total_muestras.toLocaleString()}
+                  </strong>
                 </div>
                 <div className="p-2.5 rounded-lg bg-muted/20 border text-xs">
                   <span className="text-muted-foreground block text-[11px]">Set Entrenamiento</span>
-                  <strong className="text-foreground text-sm">{resultado.muestras_train.toLocaleString()}</strong>
+                  <strong className="text-foreground text-sm">
+                    {resultado.muestras_train.toLocaleString()}
+                  </strong>
                 </div>
                 <div className="p-2.5 rounded-lg bg-muted/20 border text-xs">
                   <span className="text-muted-foreground block text-[11px]">Set Prueba / Validación</span>
-                  <strong className="text-foreground text-sm">{resultado.muestras_test.toLocaleString()}</strong>
+                  <strong className="text-foreground text-sm">
+                    {resultado.muestras_test.toLocaleString()}
+                  </strong>
                 </div>
               </div>
 
-              <div className="w-full max-w-md grid grid-cols-[1.1fr_1.3fr_1.3fr] gap-3 text-center items-center">
+              <div className="w-full max-w-lg mx-auto grid grid-cols-[1fr_1.3fr_1.3fr_1fr] gap-3 text-center items-center">
                 <div />
                 <div className="text-xs font-medium text-muted-foreground pb-1">
                   Predicción: Mención
@@ -280,6 +301,7 @@ export function MentionView() {
                 <div className="text-xs font-medium text-muted-foreground pb-1">
                   Predicción: No mención
                 </div>
+                <div />
 
                 <div className="text-right pr-3 text-xs font-medium text-muted-foreground">
                   Real: Mención
@@ -290,6 +312,7 @@ export function MentionView() {
                 <div className="rounded-lg border border-border/80 bg-muted/50 py-3.5 px-2 text-base font-bold text-foreground shadow-2xs">
                   {resultado.falseNegative.toLocaleString()}
                 </div>
+                <div />
 
                 <div className="text-right pr-3 text-xs font-medium text-muted-foreground">
                   Real: No mención
@@ -300,20 +323,33 @@ export function MentionView() {
                 <div className="rounded-lg border border-border/80 bg-muted/50 py-3.5 px-2 text-base font-bold text-foreground shadow-2xs">
                   {resultado.trueNegative.toLocaleString()}
                 </div>
+                <div />
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full max-w-xl">
                 <div className="px-3.5 py-2 rounded-lg border bg-muted/30 text-xs text-muted-foreground text-center">
-                  Accuracy: <span className="font-semibold text-foreground text-sm ml-1">{Math.round(resultado.accuracy * 100)}%</span>
+                  Accuracy:{' '}
+                  <span className="font-semibold text-foreground text-sm ml-1">
+                    {Math.round(resultado.accuracy * 100)}%
+                  </span>
                 </div>
                 <div className="px-3.5 py-2 rounded-lg border bg-muted/30 text-xs text-muted-foreground text-center">
-                  F1-Score: <span className="font-semibold text-foreground text-sm ml-1">{Math.round(resultado.f1_score * 100)}%</span>
+                  F1-Score:{' '}
+                  <span className="font-semibold text-foreground text-sm ml-1">
+                    {Math.round(resultado.f1_score * 100)}%
+                  </span>
                 </div>
                 <div className="px-3.5 py-2 rounded-lg border bg-muted/30 text-xs text-muted-foreground text-center">
-                  Precision: <span className="font-semibold text-foreground text-sm ml-1">{Math.round(resultado.precision * 100)}%</span>
+                  Precision:{' '}
+                  <span className="font-semibold text-foreground text-sm ml-1">
+                    {Math.round(resultado.precision * 100)}%
+                  </span>
                 </div>
                 <div className="px-3.5 py-2 rounded-lg border bg-muted/30 text-xs text-muted-foreground text-center">
-                  Recall: <span className="font-semibold text-foreground text-sm ml-1">{Math.round(resultado.recall * 100)}%</span>
+                  Recall:{' '}
+                  <span className="font-semibold text-foreground text-sm ml-1">
+                    {Math.round(resultado.recall * 100)}%
+                  </span>
                 </div>
               </div>
             </CardContent>
@@ -323,20 +359,21 @@ export function MentionView() {
 
       {resultado && (
         <Card className="w-full shadow-sm animate-in fade-in duration-200">
-          <CardContent className="flex items-center justify-between p-3.5 px-6">
-            <div className="flex items-center gap-3 text-xs font-mono font-medium text-foreground">
-              <FileCode2 className="h-4 w-4 text-primary" />
-              <span>{nombreArchivo}</span>
+          <CardContent className="flex items-center justify-between p-3.5 px-4 sm:px-6 gap-3">
+            <div className="flex items-center gap-2.5 text-xs font-mono font-medium text-foreground min-w-0">
+              <FileCode2 className="h-4 w-4 text-primary shrink-0" />
+              <span className="truncate">{nombreArchivo}</span>
             </div>
 
             <Button
               size="sm"
               variant="outline"
-              className="gap-2 text-xs h-8 cursor-pointer"
+              className="gap-2 text-xs h-8 cursor-pointer shrink-0"
               onClick={handleDescargar}
             >
               <Download className="h-3.5 w-3.5" />
-              Descargar modelo
+              <span className="hidden sm:inline">Descargar modelo</span>
+              <span className="sm:hidden">Descargar</span>
             </Button>
           </CardContent>
         </Card>
