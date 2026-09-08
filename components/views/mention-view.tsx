@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ShieldAlert, Download, FileCode2, Settings2, Database } from 'lucide-react'
+import { ShieldAlert, Download, FileCode2, Settings2, Database, TriangleAlert } from 'lucide-react'
 import { AnalysisRunner } from '@/components/analysis-runner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -32,6 +32,11 @@ const modelos = [
   'Random Forest',
 ]
 
+function formatearPorcentaje(valor: number): string {
+  const truncado = Math.trunc(valor * 100 * 100) / 100
+  return `${truncado.toFixed(2)}%`
+}
+
 type ResumenMenciones = {
   truePositive: number
   falsePositive: number
@@ -55,6 +60,7 @@ export function MentionView() {
   const [resultado, setResultado] = useState<ResumenMenciones | null>(null)
   const [modeloDescargaUrl, setModeloDescargaUrl] = useState<string | null>(null)
   const [nombreArchivo, setNombreArchivo] = useState<string>('modelo.pt')
+  const [errorMensaje, setErrorMensaje] = useState<string | null>(null)
 
   const { datasetSeleccionado } = useDataset()
 
@@ -64,11 +70,13 @@ export function MentionView() {
   const handleReset = () => {
     setResultado(null)
     setModeloDescargaUrl(null)
+    setErrorMensaje(null)
     setEstado('idle')
   }
 
   const ejecutarDeteccion = async () => {
     setEstado('running')
+    setErrorMensaje(null)
 
     const body = {
       dataset: datasetSeleccionado,
@@ -92,7 +100,9 @@ export function MentionView() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => null)
-        console.error('Error al detectar menciones:', errorData?.detail ?? res.statusText)
+        const mensaje = errorData?.detail ?? 'Ocurrió un error al detectar menciones. Por favor, inténtelo de nuevo.'
+        console.warn('Error al detectar menciones:', mensaje)
+        setErrorMensaje(mensaje)
         setEstado('idle')
         return
       }
@@ -103,7 +113,8 @@ export function MentionView() {
       setNombreArchivo(data.nombre_archivo)
       setEstado('done')
     } catch (error) {
-      console.error('Error de conexión al detectar menciones:', error)
+      console.warn('Error de conexión al detectar menciones:', error)
+      setErrorMensaje('No se pudo conectar con el servidor. Por favor, inténtelo de nuevo.')
       setEstado('idle')
     }
   }
@@ -121,6 +132,12 @@ export function MentionView() {
 
   return (
     <div className={`w-full mx-auto flex flex-col gap-6 py-4 ${resultado ? 'max-w-4xl' : 'max-w-5xl'}`}>
+      {errorMensaje && (
+        <div className="flex items-center gap-2.5 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <TriangleAlert className="h-4 w-4 shrink-0" />
+          <span>{errorMensaje}</span>
+        </div>
+      )}
       <div className={`grid gap-6 items-stretch w-full ${resultado ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
         <Card className="w-full shadow-sm">
           <CardHeader className="pb-4 flex flex-row items-center justify-between">
@@ -327,28 +344,28 @@ export function MentionView() {
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full max-w-xl">
-                <div className="px-3.5 py-2 rounded-lg border bg-muted/30 text-xs text-muted-foreground text-center">
-                  Accuracy:{' '}
-                  <span className="font-semibold text-foreground text-sm ml-1">
-                    {Math.round(resultado.accuracy * 100)}%
+                <div className="flex flex-col items-center gap-0.5 px-3.5 py-2 rounded-lg border bg-muted/30 text-xs text-muted-foreground text-center">
+                  <span>Accuracy</span>
+                  <span className="font-semibold text-foreground text-sm">
+                    {formatearPorcentaje(resultado.accuracy)}
                   </span>
                 </div>
-                <div className="px-3.5 py-2 rounded-lg border bg-muted/30 text-xs text-muted-foreground text-center">
-                  F1-Score:{' '}
-                  <span className="font-semibold text-foreground text-sm ml-1">
-                    {Math.round(resultado.f1_score * 100)}%
+                <div className="flex flex-col items-center gap-0.5 px-3.5 py-2 rounded-lg border bg-muted/30 text-xs text-muted-foreground text-center">
+                  <span>F1-Score</span>
+                  <span className="font-semibold text-foreground text-sm">
+                    {formatearPorcentaje(resultado.f1_score)}
                   </span>
                 </div>
-                <div className="px-3.5 py-2 rounded-lg border bg-muted/30 text-xs text-muted-foreground text-center">
-                  Precision:{' '}
-                  <span className="font-semibold text-foreground text-sm ml-1">
-                    {Math.round(resultado.precision * 100)}%
+                <div className="flex flex-col items-center gap-0.5 px-3.5 py-2 rounded-lg border bg-muted/30 text-xs text-muted-foreground text-center">
+                  <span>Precision</span>
+                  <span className="font-semibold text-foreground text-sm">
+                    {formatearPorcentaje(resultado.precision)}
                   </span>
                 </div>
-                <div className="px-3.5 py-2 rounded-lg border bg-muted/30 text-xs text-muted-foreground text-center">
-                  Recall:{' '}
-                  <span className="font-semibold text-foreground text-sm ml-1">
-                    {Math.round(resultado.recall * 100)}%
+                <div className="flex flex-col items-center gap-0.5 px-3.5 py-2 rounded-lg border bg-muted/30 text-xs text-muted-foreground text-center">
+                  <span>Recall</span>
+                  <span className="font-semibold text-foreground text-sm">
+                    {formatearPorcentaje(resultado.recall)}
                   </span>
                 </div>
               </div>
