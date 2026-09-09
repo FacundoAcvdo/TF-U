@@ -19,15 +19,9 @@ import {
 
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+import { useDatasetsQuery } from '@/context/dataset-provider'
+import { useQueryClient } from '@tanstack/react-query'
 
-interface Dataset {
-  dataset_id: string
-  dataset_name: string
-  user_id: string
-  dataset_size: number
-  embedding_size: number
-  embedding_chunked_size: number
-}
 
 function formatBytes(bytes: number): string {
   if (!bytes || bytes <= 0) {
@@ -88,9 +82,8 @@ function StorageStat({
 }  
 
 function StorageManagementView() {
-    const [datasets, setDatasets] = useState<Dataset[]>([])
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
+    const queryClient = useQueryClient()
+    const { data: datasets } = useDatasetsQuery()
     const [eliminandoDataset, setEliminandoDataset] = useState<string | null>(null)
     const [eliminandoTodos, setEliminandoTodos] = useState(false)
     
@@ -120,11 +113,7 @@ function StorageManagementView() {
             return
             }
 
-            setDatasets((datasetsActuales) =>
-            datasetsActuales.filter(
-                (dataset) => dataset.dataset_id !== datasetId
-            )
-            )
+            queryClient.invalidateQueries({ queryKey: ['datasets'] })
 
             toast.success('Dataset eliminado correctamente.')
         } catch (error) {
@@ -167,7 +156,7 @@ function StorageManagementView() {
             return
             }
 
-            setDatasets([])
+            queryClient.invalidateQueries({ queryKey: ['datasets'] })
 
             toast.success('Todos los datasets fueron eliminados correctamente.')
         } catch (error) {
@@ -182,54 +171,7 @@ function StorageManagementView() {
     }
     }
 
-
-  useEffect(() => {
-    const obtenerDatasets = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-
-        const respuesta = await fetch('http://localhost:8080/dataset/getDatasets', {
-            method: 'GET',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' }
-        });
-
-        if (!respuesta.ok) {
-          console.error(
-            'Error al obtener datasets:',
-            respuesta.status,
-            respuesta.statusText
-          )
-
-          setError(
-            'No se pudieron cargar los datasets.'
-          )
-
-          return
-        }
-
-        const data = await respuesta.json()
-
-        setDatasets(data.datasets ?? [])
-      } catch (error) {
-        console.error(
-          'Error al obtener datasets:',
-          error
-        )
-
-        setError(
-          'No se pudieron cargar los datasets.'
-        )
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    obtenerDatasets()
-  }, [])
-
-  const totalDatasetSize = datasets.reduce(
+  const totalDatasetSize = datasets?.reduce(
     (total, dataset) =>
       total +
       dataset.dataset_size +
@@ -238,33 +180,34 @@ function StorageManagementView() {
     0
   )
 
-  const totalFilesSize = datasets.reduce(
+  const totalFilesSize = datasets?.reduce(
     (total, dataset) =>
       total + dataset.dataset_size,
     0
   )
 
-  const totalEmbeddingsSize = datasets.reduce(
+  const totalEmbeddingsSize = datasets?.reduce(
     (total, dataset) =>
       total + dataset.embedding_size,
     0
   )
 
-  const totalChunkedSize = datasets.reduce(
+  const totalChunkedSize = datasets?.reduce(
     (total, dataset) =>
       total + dataset.embedding_chunked_size,
     0
   )
 
+  
   const availableStorage = Math.max(
-    totalStorage - totalDatasetSize,
+    totalStorage - (totalDatasetSize || 0),
     0
   )
 
   const percentageUsed =
     totalStorage > 0
       ? clampPercentage(
-          (totalDatasetSize / totalStorage) * 100
+          ((totalDatasetSize || 0) / totalStorage) * 100
         )
       : 0
 
@@ -301,7 +244,7 @@ function StorageManagementView() {
 
                 <div>
                   <span className="text-2xl font-bold">
-                    {formatBytes(totalDatasetSize)}
+                    {formatBytes((totalDatasetSize || 0))}
                   </span>
 
                   <span className="ml-1 text-sm text-muted-foreground">
@@ -330,22 +273,22 @@ function StorageManagementView() {
 
             <StorageStat
               label="Archivos"
-              value={formatBytes(totalFilesSize)}
+              value={formatBytes(totalFilesSize || 0)}
             />
 
             <StorageStat
               label="Embeddings"
-              value={formatBytes(totalEmbeddingsSize)}
+              value={formatBytes(totalEmbeddingsSize || 0)}
             />
 
             <StorageStat
               label="Embeddings Chunks"
-              value={formatBytes(totalChunkedSize)}
+              value={formatBytes(totalChunkedSize || 0)}
             />
 
             <StorageStat
               label="Datasets"
-              value={`${datasets.length}`}
+              value={`${datasets?.length || 0}`}
             />
 
           </div>
@@ -356,7 +299,7 @@ function StorageManagementView() {
             <Button
                 variant="destructive"
                 size="lg"
-                disabled={eliminandoTodos || datasets.length === 0}
+                disabled={eliminandoTodos || datasets?.length === 0}
                 onClick={eliminarTodosLosDatasets}
                 >
                 {eliminandoTodos ? (
@@ -387,29 +330,7 @@ function StorageManagementView() {
 
         <CardContent>
 
-          {loading && (
-            <div className="flex flex-col gap-2 py-6 text-center">
-
-              <p className="text-sm text-muted-foreground">
-                Cargando datasets...
-              </p>
-
-            </div>
-          )}
-
-          {!loading && error && (
-            <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-4">
-
-              <p className="text-sm text-destructive">
-                {error}
-              </p>
-
-            </div>
-          )}
-
-          {!loading &&
-            !error &&
-            datasets.length === 0 && (
+          {datasets && datasets.length === 0 && (
               <div className="rounded-lg border border-dashed p-8 text-center">
 
                 <p className="text-sm font-medium">
@@ -423,15 +344,12 @@ function StorageManagementView() {
               </div>
             )}
 
-          {!loading &&
-            !error &&
-            datasets.length > 0 && (
+          {datasets && datasets.length> 0 && (
               <Accordion
                 className="w-full"
               >
 
-                {[...datasets]
-                    .sort((a, b) => {
+                {datasets?.sort((a, b) => {
                         const totalA =
                         a.dataset_size +
                         a.embedding_size +
