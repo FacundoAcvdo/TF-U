@@ -1,259 +1,229 @@
-'use client'
+"use client";
 
-import React from 'react'
 import {
-  Check,
-  Download,
+  ArrowDown,
+  BarChart3,
+  CheckCircle2,
+  FileDown,
   FileText,
-  RefreshCcw,
-  Save,
-  Database,
-} from 'lucide-react'
+  Hash,
+  Link2,
+  MessageCircle,
+  Smile,
+  Users,
+} from "lucide-react";
 
-import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+} from "@/components/ui/card";
 
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Button } from "@/components/ui/button";
 
-import type {
-  CleaningConfig,
-  CleaningResult,
-} from './cleaning-types'
+import { CleaningResult as CleaningResultType } from "./cleaning-types";
 
-interface CleaningResultsProps {
-  result: CleaningResult
-  config: CleaningConfig
-  onCreateDataset: () => void
-  onReplaceDataset: () => void
-  onDownload: () => void
-  onReset: () => void
+interface CleaningResultProps {
+  result: CleaningResultType;
+  onDownload: () => void;
 }
 
-function formatNumber(value: number) {
-  return new Intl.NumberFormat('es-ES').format(value)
+interface StatCardProps {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
 }
 
-function percentage(original: number, current: number) {
-  if (!original) return 0
+function StatCard({
+  label,
+  value,
+  icon,
+}: StatCardProps) {
+  return (
+    <Card>
+      <CardContent className="flex items-center gap-4 p-5">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+          {icon}
+        </div>
 
-  return Math.round(((original - current) / original) * 100)
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">
+            {label}
+          </p>
+
+          <p className="mt-1 text-xl font-semibold">
+            {value.toLocaleString()}
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
-export function CleaningResults({
+export function CleaningResult({
   result,
-  config,
-  onCreateDataset,
-  onReplaceDataset,
   onDownload,
-  onReset,
-}: CleaningResultsProps) {
-  const [replaceDialogOpen, setReplaceDialogOpen] =
-    React.useState(false)
-
-  const rowsRemoved = result.stats.originalRows - result.stats.cleanedRows
+}: CleaningResultProps) {
+  const { stats } = result;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Header */}
       <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="mb-2 flex items-center gap-2">
-                <Badge variant="secondary">
-                  <Check className="mr-1 size-3" />
-                  Procesado
-                </Badge>
-              </div>
-
-              <CardTitle>Resultado de la limpieza</CardTitle>
-
-              <CardDescription>
-                {result.datasetName} · {result.format} ·{' '}
-                {result.size}
-              </CardDescription>
+        <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+              <CheckCircle2 className="h-6 w-6 text-primary" />
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onReset}
-            >
-              <RefreshCcw />
-              Nueva limpieza
-            </Button>
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold">
+                Limpieza completada
+              </h2>
+
+              <p className="mt-1 truncate text-sm text-muted-foreground">
+                {result.filename}
+              </p>
+            </div>
           </div>
-        </CardHeader>
+
+          <Button
+            type="button"
+            onClick={onDownload}
+            className="shrink-0 cursor-pointer"
+          >
+            <FileDown className="mr-2 h-5 w-5 cursor-pointer" />
+            Descargar dataset
+          </Button>
+        </CardContent>
       </Card>
 
-      {/* Stats */}
+      {/* Resumen */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Documentos</CardDescription>
-            <CardTitle className="text-2xl">
-              {formatNumber(result.stats.cleanedRows)}
-            </CardTitle>
-          </CardHeader>
+        <StatCard
+          label="Filas originales"
+          value={stats.original_rows}
+          icon={<FileText className="h-5 w-5" />}
+        />
 
-          <CardContent>
-            <p className="text-xs text-muted-foreground">
-              Antes:{' '}
-              {formatNumber(result.stats.originalRows)}
-              {rowsRemoved > 0 && (
-                <>
-                  {' · '}
-                  {formatNumber(rowsRemoved)} eliminados
-                </>
-              )}
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          label="Filas finales"
+          value={stats.cleaned_rows}
+          icon={<CheckCircle2 className="h-5 w-5" />}
+        />
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Tokens</CardDescription>
-            <CardTitle className="text-2xl">
-              {formatNumber(result.stats.cleanedTokens)}
-            </CardTitle>
-          </CardHeader>
+        <StatCard
+          label="Tokens originales"
+          value={stats.original_tokens}
+          icon={<BarChart3 className="h-5 w-5" />}
+        />
 
-          <CardContent>
-            <p className="text-xs text-muted-foreground">
-              Reducción:{' '}
-              {percentage(
-                result.stats.originalTokens,
-                result.stats.cleanedTokens
-              )}
-              %
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Términos únicos</CardDescription>
-            <CardTitle className="text-2xl">
-              {formatNumber(
-                result.stats.cleanedUniqueTerms
-              )}
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent>
-            <p className="text-xs text-muted-foreground">
-              Antes:{' '}
-              {formatNumber(
-                result.stats.originalUniqueTerms
-              )}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Duplicados</CardDescription>
-            <CardTitle className="text-2xl">
-              {formatNumber(result.stats.removedDuplicates)}
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent>
-            <p className="text-xs text-muted-foreground">
-              Documentos eliminados
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          label="Tokens finales"
+          value={stats.cleaned_tokens}
+          icon={<BarChart3 className="h-5 w-5" />}
+        />
       </div>
 
-      {/* Cleaning impact */}
+      {/* Procesamiento */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">
-            Impacto de la limpieza
-          </CardTitle>
-
-          <CardDescription>
-            Elementos modificados o eliminados durante el procesamiento.
-          </CardDescription>
+          <CardTitle>Procesamiento realizado</CardTitle>
         </CardHeader>
 
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat
+            <StatCard
               label="Duplicados eliminados"
-              value={result.stats.removedDuplicates}
+              value={stats.removed_duplicates}
+              icon={<CopyIcon />}
             />
 
-            <Stat
+            <StatCard
               label="URLs eliminadas"
-              value={result.stats.removedUrls}
+              value={stats.removed_urls}
+              icon={<Link2 className="h-5 w-5" />}
             />
 
-            <Stat
+            <StatCard
               label="Menciones eliminadas"
-              value={result.stats.removedMentions}
+              value={stats.removed_mentions}
+              icon={<MessageCircle className="h-5 w-5" />}
             />
 
-            <Stat
+            <StatCard
               label="HTML eliminado"
-              value={result.stats.removedHtml}
+              value={stats.removed_html}
+              icon={<FileText className="h-5 w-5" />}
             />
 
-            <Stat
+            <StatCard
               label="Emojis procesados"
-              value={result.stats.emojisProcessed}
+              value={stats.emojis_processed}
+              icon={<Smile className="h-5 w-5" />}
             />
 
-            <Stat
+            <StatCard
               label="Hashtags procesados"
-              value={result.stats.hashtagsProcessed}
+              value={stats.hashtags_processed}
+              icon={<Hash className="h-5 w-5" />}
             />
 
-            <Stat
-              label="Stopwords eliminadas"
-              value={result.stats.stopwordsRemoved}
-            />
-
-            <Stat
+            <StatCard
               label="Entidades anonimizadas"
-              value={result.stats.entitiesAnonymized}
+              value={stats.entities_anonymized}
+              icon={<Users className="h-5 w-5" />}
             />
 
-            <Stat
-              label="Puntuación eliminada"
-              value={result.stats.punctuationRemoved}
+            <StatCard
+              label="Stopwords eliminadas"
+              value={stats.stopwords_removed}
+              icon={<MessageCircle className="h-5 w-5" />}
             />
+          </div>
+        </CardContent>
+      </Card>
 
-            <Stat
-              label="Lemas procesados"
-              value={result.stats.lemmasProcessed}
-            />
+      {/* Métricas adicionales */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Métricas adicionales</CardTitle>
+        </CardHeader>
 
-            <Stat
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Metric
               label="Espacios normalizados"
-              value={result.stats.normalizedWhitespace}
+              value={stats.normalized_whitespace}
             />
 
-            <Stat
-              label="Valores nulos tratados"
-              value={result.stats.nullValuesHandled}
+            <Metric
+              label="Puntuación eliminada"
+              value={stats.punctuation_removed}
+            />
+
+            <Metric
+              label="Lemas procesados"
+              value={stats.lemmas_processed}
+            />
+
+            <Metric
+              label="Términos únicos originales"
+              value={stats.original_unique_terms}
+            />
+
+            <Metric
+              label="Términos únicos finales"
+              value={stats.cleaned_unique_terms}
+            />
+
+            <Metric
+              label="Filas eliminadas"
+              value={Math.max(
+                stats.original_rows - stats.cleaned_rows,
+                0,
+              )}
             />
           </div>
         </CardContent>
@@ -262,235 +232,89 @@ export function CleaningResults({
       {/* Preview */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">
-            Vista previa
-          </CardTitle>
-
-          <CardDescription>
-            Algunos ejemplos del texto antes y después de aplicar
-            la configuración seleccionada.
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          {result.previews.map((preview, index) => (
-            <div
-              key={index}
-              className="overflow-hidden rounded-lg border"
-            >
-              <div className="grid lg:grid-cols-2">
-                <div className="border-b p-4 lg:border-b-0 lg:border-r">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Original
-                    </span>
-
-                    <Badge
-                      variant="outline"
-                      className="text-[10px]"
-                    >
-                      Antes
-                    </Badge>
-                  </div>
-
-                  <p className="text-sm leading-relaxed">
-                    {preview.original}
-                  </p>
-                </div>
-
-                <div className="bg-primary/[0.03] p-4">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Limpio
-                    </span>
-
-                    <Badge
-                      variant="secondary"
-                      className="text-[10px]"
-                    >
-                      Después
-                    </Badge>
-                  </div>
-
-                  <p className="text-sm leading-relaxed">
-                    {preview.cleaned}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            Configuración utilizada
-          </CardTitle>
-
-          <CardDescription>
-            Operaciones utilizadas para generar esta versión del dataset.
-          </CardDescription>
+          <CardTitle>Vista previa de cambios</CardTitle>
         </CardHeader>
 
         <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {config.operations.map((operation) => (
-              <Badge key={operation} variant="outline">
-                {operation}
-              </Badge>
-            ))}
-          </div>
+          {result.previews.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-6 text-center">
+              <p className="text-sm font-medium">
+                No hay cambios de texto para mostrar.
+              </p>
 
-          {config.operations.includes('handleEmojis') && (
-            <p className="mt-3 text-xs text-muted-foreground">
-              Emojis:{' '}
-              <strong>{config.emojiStrategy}</strong>
-            </p>
-          )}
+              <p className="mt-1 text-xs text-muted-foreground">
+                Las operaciones seleccionadas no modificaron el
+                contenido de los documentos mostrados.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {result.previews.map((preview, index) => (
+                <div
+                  key={index}
+                  className="overflow-hidden rounded-xl border"
+                >
+                  <div className="border-b bg-muted/40 px-4 py-2">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Documento {index + 1}
+                    </span>
+                  </div>
 
-          {config.operations.includes('handleHashtags') && (
-            <p className="text-xs text-muted-foreground">
-              Hashtags:{' '}
-              <strong>{config.hashtagStrategy}</strong>
-            </p>
+                  <div className="grid lg:grid-cols-2">
+                    <div className="border-b p-4 lg:border-b-0 lg:border-r">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Original
+                      </p>
+
+                      <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                        {preview.original}
+                      </p>
+                    </div>
+
+                    <div className="p-4">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Limpio
+                      </p>
+
+                      <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                        {preview.cleaned}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
-
-      {/* Final actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            ¿Qué quieres hacer con el dataset?
-          </CardTitle>
-
-          <CardDescription>
-            Puedes conservar el original, reemplazarlo o descargar únicamente
-            el resultado.
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="grid gap-3 md:grid-cols-3">
-          <ActionButton
-            icon={<Database />}
-            title="Crear nuevo dataset"
-            description="Conserva el original y agrega esta versión."
-            onClick={onCreateDataset}
-          />
-
-          <ActionButton
-            icon={<Save />}
-            title="Reemplazar original"
-            description="Usa esta versión como dataset principal."
-            onClick={() => setReplaceDialogOpen(true)}
-          />
-
-          <ActionButton
-            icon={<Download />}
-            title="Descargar solamente"
-            description="Descarga el resultado sin guardarlo."
-            onClick={onDownload}
-          />
-        </CardContent>
-
-        <CardFooter className="border-t pt-4">
-          <p className="text-xs text-muted-foreground">
-            Recomendación: conservar el dataset original permite volver a
-            procesarlo con otra configuración posteriormente.
-          </p>
-        </CardFooter>
-      </Card>
-
-      {/* Replace confirmation */}
-      <Dialog
-        open={replaceDialogOpen}
-        onOpenChange={setReplaceDialogOpen}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              ¿Reemplazar dataset original?
-            </DialogTitle>
-
-            <DialogDescription>
-              El dataset limpio pasará a ser la versión principal.
-              Recomendamos conservar el original si planeas probar
-              diferentes configuraciones de limpieza.
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>
-              Cancelar
-            </DialogClose>
-
-            <Button
-              onClick={() => {
-                setReplaceDialogOpen(false)
-                onReplaceDataset()
-              }}
-            >
-              Reemplazar dataset
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
-  )
+  );
 }
 
-function Stat({
+function Metric({
   label,
   value,
 }: {
-  label: string
-  value: number
+  label: string;
+  value: number;
 }) {
   return (
-    <div className="rounded-lg border p-3">
+    <div className="rounded-xl border p-4">
       <p className="text-xs text-muted-foreground">
         {label}
       </p>
 
       <p className="mt-1 text-lg font-semibold">
-        {formatNumber(value)}
+        {value.toLocaleString()}
       </p>
     </div>
-  )
+  );
 }
 
-function ActionButton({
-  icon,
-  title,
-  description,
-  onClick,
-}: {
-  icon: React.ReactNode
-  title: string
-  description: string
-  onClick: () => void
-}) {
+function CopyIcon() {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex items-start gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-muted/50"
-    >
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-        {icon}
-      </div>
-
-      <div>
-        <p className="text-sm font-medium">
-          {title}
-        </p>
-
-        <p className="mt-1 text-xs text-muted-foreground">
-          {description}
-        </p>
-      </div>
-    </button>
-  )
+    <div className="flex h-5 w-5 items-center justify-center">
+      <span className="text-sm font-bold">2×</span>
+    </div>
+  );
 }

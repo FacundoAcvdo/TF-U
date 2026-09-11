@@ -1,82 +1,75 @@
 export type CleaningOperation =
-  | 'lowercase'
-  | 'removeUrls'
-  | 'removeMentions'
-  | 'removeHtml'
-  | 'normalizeWhitespace'
-  | 'removeDuplicates'
-  | 'handleHashtags'
-  | 'handleEmojis'
-  | 'removePunctuation'
-  | 'removeStopwords'
-  | 'lemmatization'
-  | 'anonymization'
+  | "lowercase"
+  | "remove_urls"
+  | "remove_mentions"
+  | "remove_html"
+  | "normalize_whitespace"
+  | "remove_duplicates"
+  | "handle_hashtags"
+  | "handle_emojis"
+  | "remove_punctuation"
+  | "remove_stopwords"
+  | "lemmatization"
+  | "anonymization";
 
-export type CleaningPreset =
-  | 'conservative'
-  | 'recommended'
-  | 'linguistic'
-  | 'custom'
+export type EmojiStrategy =
+  | "keep"
+  | "remove"
+  | "convert";
 
-export type EmojiStrategy = 'keep' | 'remove' | 'convert'
-export type HashtagStrategy = 'keep' | 'removeSymbol' | 'segment'
+export type HashtagStrategy =
+  | "keep"
+  | "remove_symbol"
+  | "segment";
+
+export type CleaningLanguage =
+  | "en"
+  | "es"
+  | "bilingual";
 
 export interface CleaningConfig {
-  operations: CleaningOperation[]
-  emojiStrategy: EmojiStrategy
-  hashtagStrategy: HashtagStrategy
-}
-
-export interface DatasetInfo {
-  id: string
-  name: string
-  format: string
-  rows: number
-  size: string
-  language?: string
+  operations: CleaningOperation[];
+  emoji_strategy: EmojiStrategy;
+  hashtag_strategy: HashtagStrategy;
+  language?: CleaningLanguage | null;
 }
 
 export interface CleaningStats {
-  originalRows: number
-  cleanedRows: number
+  original_rows: number;
+  cleaned_rows: number;
 
-  originalTokens: number
-  cleanedTokens: number
+  original_tokens: number;
+  cleaned_tokens: number;
 
-  originalUniqueTerms: number
-  cleanedUniqueTerms: number
+  original_unique_terms: number;
+  cleaned_unique_terms: number;
 
-  removedDuplicates: number
-  removedUrls: number
-  removedMentions: number
-  removedHtml: number
-  normalizedWhitespace: number
-  emojisProcessed: number
-  hashtagsProcessed: number
+  removed_duplicates: number;
+  removed_urls: number;
+  removed_mentions: number;
+  removed_html: number;
 
-  nullValuesHandled: number
-  punctuationRemoved: number
-  stopwordsRemoved: number
-  lemmasProcessed: number
-  entitiesAnonymized: number
+  normalized_whitespace: number;
+
+  emojis_processed: number;
+  hashtags_processed: number;
+
+  punctuation_removed: number;
+  stopwords_removed: number;
+  lemmas_processed: number;
+  entities_anonymized: number;
 }
 
 export interface CleaningPreview {
-  original: string
-  cleaned: string
+  original: string;
+  cleaned: string;
 }
 
 export interface CleaningResult {
-  id: string
-  datasetName: string
-  format: string
-  size: string
-  createdAt: string
-
-  stats: CleaningStats
-  previews: CleaningPreview[]
-
-  config: CleaningConfig
-
-  downloadUrl?: string
+  source_dataset_name: string;
+  filename: string;
+  format: string;
+  download_id: string;
+  stats: CleaningStats;
+  previews: CleaningPreview[];
 }

@@ -1,419 +1,517 @@
-'use client'
+"use client";
 
-import React from 'react'
 import {
   Check,
-  ChevronDown,
-  FileText,
-  LoaderCircle,
-  Sparkles,
-} from 'lucide-react'
+  Hash,
+  Languages,
+  Smile,
+} from "lucide-react";
 
-import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+} from "@/components/ui/card";
+
+import { Checkbox } from "@/components/ui/checkbox";
+
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
+} from "@/components/ui/select";
 
-import type {
+import {
   CleaningConfig as CleaningConfigType,
+  CleaningLanguage,
   CleaningOperation,
-  CleaningPreset,
-  EmojiStrategy,
-  HashtagStrategy,
-} from './cleaning-types'
-
-interface OperationDefinition {
-  id: CleaningOperation
-  label: string
-  description: string
-  recommended?: boolean
-}
-
-const operations: OperationDefinition[] = [
-  {
-    id: 'lowercase',
-    label: 'Convertir a minúsculas',
-    description: 'Convierte todo el texto a minúsculas.',
-    recommended: true,
-  },
-  {
-    id: 'removeUrls',
-    label: 'Quitar URLs',
-    description: 'Elimina enlaces y direcciones web.',
-    recommended: true,
-  },
-  {
-    id: 'removeMentions',
-    label: 'Quitar menciones',
-    description: 'Elimina menciones como @usuario.',
-    recommended: true,
-  },
-  {
-    id: 'removeHtml',
-    label: 'Quitar HTML',
-    description: 'Elimina etiquetas HTML presentes en el texto.',
-    recommended: true,
-  },
-  {
-    id: 'normalizeWhitespace',
-    label: 'Normalizar espacios',
-    description: 'Reduce espacios, saltos de línea y separadores innecesarios.',
-    recommended: true,
-  },
-  {
-    id: 'removeDuplicates',
-    label: 'Quitar duplicados',
-    description: 'Elimina documentos exactamente duplicados.',
-    recommended: true,
-  },
-  {
-    id: 'handleHashtags',
-    label: 'Procesar hashtags',
-    description: 'Permite conservar, normalizar o segmentar hashtags.',
-  },
-  {
-    id: 'handleEmojis',
-    label: 'Procesar emojis',
-    description: 'Permite conservar, eliminar o convertir emojis a texto.',
-  },
-  {
-    id: 'removePunctuation',
-    label: 'Quitar puntuación',
-    description: 'Elimina signos de puntuación.',
-  },
-  {
-    id: 'removeStopwords',
-    label: 'Quitar stopwords',
-    description: 'Elimina palabras funcionales según el idioma.',
-  },
-  {
-    id: 'lemmatization',
-    label: 'Lematización',
-    description: 'Reduce las palabras a su lema.',
-  },
-  {
-    id: 'anonymization',
-    label: 'Anonimización',
-    description: 'Detecta y reemplaza información personal identificable.',
-  },
-]
-
-const presets: Record<
-  Exclude<CleaningPreset, 'custom'>,
-  CleaningConfigType
-> = {
-  conservative: {
-    operations: [
-      'removeUrls',
-      'removeMentions',
-      'removeHtml',
-      'normalizeWhitespace',
-      'removeDuplicates',
-    ],
-    emojiStrategy: 'keep',
-    hashtagStrategy: 'keep',
-  },
-
-  recommended: {
-    operations: [
-      'lowercase',
-      'removeUrls',
-      'removeMentions',
-      'removeHtml',
-      'normalizeWhitespace',
-      'removeDuplicates',
-      'handleHashtags',
-      'handleEmojis',
-    ],
-    emojiStrategy: 'convert',
-    hashtagStrategy: 'removeSymbol',
-  },
-
-  linguistic: {
-    operations: [
-      'lowercase',
-      'removeUrls',
-      'removeMentions',
-      'removeHtml',
-      'normalizeWhitespace',
-      'removeDuplicates',
-      'handleHashtags',
-      'handleEmojis',
-      'removePunctuation',
-      'removeStopwords',
-      'lemmatization',
-      'anonymization',
-    ],
-    emojiStrategy: 'convert',
-    hashtagStrategy: 'segment',
-  },
-}
+} from "./cleaning-types";
 
 interface CleaningConfigProps {
-  config: CleaningConfigType
-  preset: CleaningPreset
-  processing: boolean
-  onPresetChange: (preset: CleaningPreset) => void
-  onToggleOperation: (operation: CleaningOperation) => void
-  onEmojiStrategyChange: (strategy: EmojiStrategy) => void
-  onHashtagStrategyChange: (strategy: HashtagStrategy) => void
-  onProcess: () => void
+  config: CleaningConfigType;
+  onChange: (config: CleaningConfigType) => void;
 }
+
+interface OperationOption {
+  value: CleaningOperation;
+  label: string;
+  description: string;
+}
+
+const OPERATIONS: OperationOption[] = [
+  {
+    value: "lowercase",
+    label: "Convertir a minúsculas",
+    description: "Convierte todo el texto a minúsculas.",
+  },
+  {
+    value: "remove_urls",
+    label: "Eliminar URLs",
+    description: "Elimina enlaces y direcciones web.",
+  },
+  {
+    value: "remove_mentions",
+    label: "Eliminar menciones",
+    description: "Elimina menciones como @usuario.",
+  },
+  {
+    value: "remove_html",
+    label: "Eliminar HTML",
+    description: "Elimina etiquetas HTML del texto.",
+  },
+  {
+    value: "normalize_whitespace",
+    label: "Normalizar espacios",
+    description: "Reduce espacios y saltos de línea innecesarios.",
+  },
+  {
+    value: "remove_duplicates",
+    label: "Eliminar duplicados",
+    description: "Elimina documentos con texto repetido.",
+  },
+  {
+    value: "remove_punctuation",
+    label: "Eliminar puntuación",
+    description: "Elimina signos de puntuación.",
+  },
+  {
+    value: "remove_stopwords",
+    label: "Eliminar stopwords",
+    description: "Elimina palabras frecuentes en inglés y español.",
+  },
+  {
+    value: "lemmatization",
+    label: "Lematización",
+    description: "Convierte las palabras a su forma léxica base.",
+  },
+  {
+    value: "anonymization",
+    label: "Anonimización",
+    description: "Reemplaza emails, teléfonos e IPs.",
+  },
+];
+
+const EMOJI_OPTIONS: {
+  value: CleaningConfigType["emoji_strategy"];
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "keep",
+    label: "Conservar",
+    description: "Mantiene los emojis originales.",
+  },
+  {
+    value: "remove",
+    label: "Eliminar",
+    description: "Elimina los emojis del texto.",
+  },
+  {
+    value: "convert",
+    label: "Convertir",
+    description: "Convierte emojis a nombres textuales.",
+  },
+];
+
+const HASHTAG_OPTIONS: {
+  value: CleaningConfigType["hashtag_strategy"];
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "keep",
+    label: "Conservar",
+    description: "Mantiene el hashtag completo.",
+  },
+  {
+    value: "remove_symbol",
+    label: "Quitar #",
+    description: "Conserva la palabra y elimina el símbolo #.",
+  },
+  {
+    value: "segment",
+    label: "Segmentar",
+    description: "Intenta separar palabras dentro del hashtag.",
+  },
+];
+
+const LANGUAGE_OPTIONS: {
+  value: CleaningLanguage;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "en",
+    label: "Inglés",
+    description: "Usa el modelo lingüístico de inglés.",
+  },
+  {
+    value: "es",
+    label: "Español",
+    description: "Usa el modelo lingüístico de español.",
+  },
+  {
+    value: "bilingual",
+    label: "Bilingüe",
+    description: "Preparado para datasets bilingües.",
+  },
+];
 
 export function CleaningConfig({
   config,
-  preset,
-  processing,
-  onPresetChange,
-  onToggleOperation,
-  onEmojiStrategyChange,
-  onHashtagStrategyChange,
-  onProcess,
+  onChange,
 }: CleaningConfigProps) {
+  const hasEmojis = config.operations.includes("handle_emojis");
+  const hasHashtags = config.operations.includes("handle_hashtags");
+  const hasLemmatization = config.operations.includes("lemmatization");
+
+  const toggleOperation = (operation: CleaningOperation) => {
+    const exists = config.operations.includes(operation);
+
+    const operations = exists
+      ? config.operations.filter((item) => item !== operation)
+      : [...config.operations, operation];
+
+    const nextConfig: CleaningConfigType = {
+      ...config,
+      operations,
+    };
+
+    if (!operations.includes("lemmatization")) {
+      nextConfig.language = null;
+    }
+
+    onChange(nextConfig);
+  };
+
+  const setEmojiStrategy = (
+    emoji_strategy: CleaningConfigType["emoji_strategy"],
+  ) => {
+    onChange({
+      ...config,
+      emoji_strategy,
+    });
+  };
+
+  const setHashtagStrategy = (
+    hashtag_strategy: CleaningConfigType["hashtag_strategy"],
+  ) => {
+    onChange({
+      ...config,
+      hashtag_strategy,
+    });
+  };
+
+  const setLanguage = (language: CleaningLanguage) => {
+    onChange({
+      ...config,
+      language,
+    });
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <CardTitle>Configuración de limpieza</CardTitle>
-            <CardDescription>
-              Selecciona las operaciones que deseas aplicar al dataset.
-            </CardDescription>
-          </div>
+    <div className="space-y-6">
+      {/* Operaciones principales */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Operaciones de limpieza</CardTitle>
 
-          <Badge variant="secondary" className="hidden sm:flex">
-            {config.operations.length} operaciones
-          </Badge>
-        </div>
-      </CardHeader>
+          <CardDescription>
+            Selecciona las transformaciones que quieres aplicar al dataset.
+            Las operaciones se ejecutarán en el orden definido por el backend.
+          </CardDescription>
+        </CardHeader>
 
-      <CardContent className="space-y-6">
-        {/* Presets */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Preset de limpieza
-          </label>
-
-          <Select
-            value={preset}
-            onValueChange={(value) =>
-              onPresetChange(value as CleaningPreset)
-            }
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Selecciona un preset" />
-            </SelectTrigger>
-
-            <SelectContent>
-              <SelectItem value="conservative">
-                Limpieza conservadora
-              </SelectItem>
-
-              <SelectItem value="recommended">
-                Limpieza recomendada
-              </SelectItem>
-
-              <SelectItem value="linguistic">
-                Limpieza lingüística
-              </SelectItem>
-
-              <SelectItem value="custom">
-                Personalizada
-              </SelectItem>
-            </SelectContent>
-          </Select>
-
-          {preset !== 'custom' && (
-            <div className="flex items-start gap-2 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
-              <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" />
-
-              <span>
-                Esta configuración es una recomendación. Puedes cambiar
-                individualmente las operaciones antes de procesar el dataset.
-              </span>
-            </div>
-          )}
-        </div>
-
-        <Separator />
-
-        {/* Operations */}
-        <div className="space-y-3">
-          <div>
-            <h3 className="text-sm font-medium">
-              Operaciones
-            </h3>
-
-            <p className="text-xs text-muted-foreground">
-              Las operaciones marcadas se ejecutarán en el backend.
-            </p>
-          </div>
-
-          <div className="grid gap-2 md:grid-cols-2">
-            {operations.map((operation) => {
-              const active = config.operations.includes(operation.id)
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {OPERATIONS.map((operation) => {
+              const selected = config.operations.includes(
+                operation.value,
+              );
 
               return (
-                <button
-                  key={operation.id}
-                  type="button"
-                  onClick={() => onToggleOperation(operation.id)}
+                <label
+                  key={operation.value}
                   className={[
-                    'group flex items-start gap-3 rounded-lg border p-3 text-left transition-colors',
-                    active
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:bg-muted/50',
-                  ].join(' ')}
+                    "group relative flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-all",
+                    "hover:border-primary/50 hover:bg-muted/40",
+                    selected
+                      ? "border-primary bg-primary/5"
+                      : "border-border",
+                  ].join(" ")}
                 >
-                  <span
-                    className={[
-                      'mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border',
-                      active
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : 'border-input bg-background',
-                    ].join(' ')}
-                  >
-                    {active && <Check className="size-3" />}
-                  </span>
+                  <Checkbox
+                    checked={selected}
+                    onCheckedChange={() =>
+                      toggleOperation(operation.value)
+                    }
+                    className="mt-0.5"
+                  />
 
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2 text-sm font-medium">
-                      {operation.label}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">
+                        {operation.label}
+                      </span>
 
-                      {operation.recommended && (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px]"
-                        >
-                          Recomendada
-                        </Badge>
+                      {selected && (
+                        <Check className="h-4 w-4 text-primary" />
                       )}
-                    </span>
+                    </div>
 
-                    <span className="mt-1 block text-xs text-muted-foreground">
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                       {operation.description}
-                    </span>
-                  </span>
-                </button>
-              )
+                    </p>
+                  </div>
+                </label>
+              );
             })}
+
+            {/* Emojis */}
+            <label
+              className={[
+                "group relative flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-all",
+                "hover:border-primary/50 hover:bg-muted/40",
+                hasEmojis
+                  ? "border-primary bg-primary/5"
+                  : "border-border",
+              ].join(" ")}
+            >
+              <Checkbox
+                checked={hasEmojis}
+                onCheckedChange={() =>
+                  toggleOperation("handle_emojis")
+                }
+                className="mt-0.5"
+              />
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <Smile className="h-4 w-4 text-muted-foreground" />
+
+                  <span className="text-sm font-medium">
+                    Gestionar emojis
+                  </span>
+
+                  {hasEmojis && (
+                    <Check className="h-4 w-4 text-primary" />
+                  )}
+                </div>
+
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  Define qué hacer con los emojis del texto.
+                </p>
+              </div>
+            </label>
+
+            {/* Hashtags */}
+            <label
+              className={[
+                "group relative flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-all",
+                "hover:border-primary/50 hover:bg-muted/40",
+                hasHashtags
+                  ? "border-primary bg-primary/5"
+                  : "border-border",
+              ].join(" ")}
+            >
+              <Checkbox
+                checked={hasHashtags}
+                onCheckedChange={() =>
+                  toggleOperation("handle_hashtags")
+                }
+                className="mt-0.5"
+              />
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <Hash className="h-4 w-4 text-muted-foreground" />
+
+                  <span className="text-sm font-medium">
+                    Gestionar hashtags
+                  </span>
+
+                  {hasHashtags && (
+                    <Check className="h-4 w-4 text-primary" />
+                  )}
+                </div>
+
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  Define cómo tratar hashtags como #depresion.
+                </p>
+              </div>
+            </label>
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Emoji configuration */}
-        {config.operations.includes('handleEmojis') && (
-          <>
-            <Separator />
+      {/* Configuraciones específicas */}
+      {(hasEmojis || hasHashtags) && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          {hasEmojis && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Smile className="h-5 w-5" />
+                  Tratamiento de emojis
+                </CardTitle>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Tratamiento de emojis
-              </label>
+                <CardDescription>
+                  Los emojis pueden contener información emocional
+                  relevante, por lo que su eliminación es opcional.
+                </CardDescription>
+              </CardHeader>
 
-              <Select
-                value={config.emojiStrategy}
-                onValueChange={(value) =>
-                  onEmojiStrategyChange(value as EmojiStrategy)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+              <CardContent>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {EMOJI_OPTIONS.map((option) => {
+                    const selected =
+                      config.emoji_strategy === option.value;
 
-                <SelectContent>
-                  <SelectItem value="keep">
-                    Mantener emojis
-                  </SelectItem>
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() =>
+                          setEmojiStrategy(option.value)
+                        }
+                        className={[
+                          "rounded-xl border p-4 text-left transition-all",
+                          "hover:border-primary/50 hover:bg-muted/40",
+                          selected
+                            ? "border-primary bg-primary/5"
+                            : "border-border",
+                        ].join(" ")}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-medium">
+                            {option.label}
+                          </span>
 
-                  <SelectItem value="remove">
-                    Eliminar emojis
-                  </SelectItem>
+                          {selected && (
+                            <Check className="h-4 w-4 text-primary" />
+                          )}
+                        </div>
 
-                  <SelectItem value="convert">
-                    Convertir a texto
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-
-              <p className="text-xs text-muted-foreground">
-                Convertir emojis permite conservar parte de su información
-                semántica en análisis posteriores.
-              </p>
-            </div>
-          </>
-        )}
-
-        {/* Hashtag configuration */}
-        {config.operations.includes('handleHashtags') && (
-          <>
-            <Separator />
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Tratamiento de hashtags
-              </label>
-
-              <Select
-                value={config.hashtagStrategy}
-                onValueChange={(value) =>
-                  onHashtagStrategyChange(value as HashtagStrategy)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-
-                <SelectContent>
-                  <SelectItem value="keep">
-                    Mantener hashtag
-                  </SelectItem>
-
-                  <SelectItem value="removeSymbol">
-                    Quitar # y conservar texto
-                  </SelectItem>
-
-                  <SelectItem value="segment">
-                    Segmentar palabras
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </>
-        )}
-
-        <Separator />
-
-        <Button
-          onClick={onProcess}
-          disabled={processing || config.operations.length === 0}
-          className="h-10 w-full"
-        >
-          {processing ? (
-            <>
-              <LoaderCircle className="animate-spin" />
-              Procesando dataset...
-            </>
-          ) : (
-            <>
-              <FileText />
-              Procesar dataset
-            </>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          {option.description}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
           )}
-        </Button>
-      </CardContent>
-    </Card>
-  )
+
+          {hasHashtags && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Hash className="h-5 w-5" />
+                  Tratamiento de hashtags
+                </CardTitle>
+
+                <CardDescription>
+                  Los hashtags pueden conservar información temática
+                  útil para el análisis.
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {HASHTAG_OPTIONS.map((option) => {
+                    const selected =
+                      config.hashtag_strategy === option.value;
+
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() =>
+                          setHashtagStrategy(option.value)
+                        }
+                        className={[
+                          "rounded-xl border p-4 text-left transition-all",
+                          "hover:border-primary/50 hover:bg-muted/40",
+                          selected
+                            ? "border-primary bg-primary/5"
+                            : "border-border",
+                        ].join(" ")}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-medium">
+                            {option.label}
+                          </span>
+
+                          {selected && (
+                            <Check className="h-4 w-4 text-primary" />
+                          )}
+                        </div>
+
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          {option.description}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Idioma */}
+      {hasLemmatization && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Languages className="h-5 w-5" />
+              Idioma para lematización
+            </CardTitle>
+
+            <CardDescription>
+              La lematización necesita conocer el idioma del dataset.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            <Select
+              value={config.language ?? undefined}
+              onValueChange={(value) =>
+                setLanguage(value as CleaningLanguage)
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona un idioma" />
+              </SelectTrigger>
+
+              <SelectContent>
+                {LANGUAGE_OPTIONS.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {config.language === "bilingual" && (
+              <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+                La opción bilingüe está preparada para futuras
+                versiones. Actualmente la lematización bilingüe
+                requiere detección de idioma por documento.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
 }
