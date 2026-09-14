@@ -4,10 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 
 interface DatasetInfo {
+    dataset_id: string
+    user_id: string
     dataset_name: string;
     dataset_size: number;
-    embeddings_size: number;
-    embeddings_chunked_size: number;
+    embedding_size: number;
+    embedding_chunked_size: number;
 }
 
 interface DatasetContextType {

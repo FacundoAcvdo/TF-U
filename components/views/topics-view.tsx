@@ -250,8 +250,8 @@ export function TopicsView() {
                   <div>
                     <h4 className="mb-2 text-sm font-medium">Términos representativos</h4>
                     <div className="flex flex-wrap gap-1.5">
-                      {selectedTopic.keywords.map((keyword) => (
-                        <Badge key={keyword} variant="outline" className="text-xs">
+                      {selectedTopic.keywords.map((keyword, indice) => (
+                        <Badge key={indice} variant="outline" className="text-xs">
                           {keyword}
                         </Badge>
                       ))}
@@ -352,9 +352,9 @@ function TopicRanking({
           </div>
 
           <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1">
-            {topic.keywords.slice(0, 6).map((keyword) => (
+            {topic.keywords.slice(0, 6).map((keyword, index) => (
               <span
-                key={keyword}
+                key={index}
                 className="text-xs text-muted-foreground"
               >
                 {keyword}
