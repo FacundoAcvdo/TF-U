@@ -66,23 +66,29 @@ export function DashboardShell({ children, userEmail = 'usuario@demo.local' }: D
       )}
 
       <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-background/85 px-4 py-3.5 backdrop-blur md:px-8">
+        <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-background/85 px-3 py-3 backdrop-blur sm:px-4 sm:py-3.5 md:px-8">
           <button
             onClick={() => setMenuAbierto((v) => !v)}
-            className="flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground lg:hidden"
+            className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground lg:hidden"
             aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'}
           >
             {menuAbierto ? <X className="size-4" /> : <Menu className="size-4" />}
           </button>
-          <div className="flex flex-1 justify-between items-center gap-3">
-            <div className="flex min-w-0 flex-col">
-              <h1 className="truncate text-lg font-semibold tracking-tight text-balance">{meta.titulo}</h1>
+          <div className="flex flex-1 min-w-0 items-center justify-between gap-2 sm:gap-3">
+            <div className="flex min-w-0 flex-1 flex-col">
+              <h1 className="truncate text-[15px] font-semibold tracking-tight sm:text-lg">{meta.titulo}</h1>
               <p className="hidden truncate text-sm text-muted-foreground sm:block">{meta.descripcion}</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center">
               <Dialog>
                 <form className="w-full">
-                  <DialogTrigger render={<Button className="w-full h-10">{datasetSeleccionado || 'Seleccionar dataset'}</Button>} />
+                  <DialogTrigger
+                    render={
+                      <Button className="h-9 max-w-[46vw] shrink-0 truncate px-2.5 text-xs sm:h-10 sm:max-w-[280px] sm:px-3 sm:text-sm">
+                        <span className="truncate">{datasetSeleccionado || 'Seleccionar dataset'}</span>
+                      </Button>
+                    }
+                  />
                   <DialogContent className="sm:max-w-sm">
                     <DialogHeader>
                       <DialogTitle>Seleccionar dataset</DialogTitle>
