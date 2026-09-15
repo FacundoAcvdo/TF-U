@@ -91,7 +91,7 @@ export function MentionView() {
     }
 
     try {
-      const res = await fetch('http://localhost:8080/clasificacion/detectar_menciones', {
+      const res = await fetch('http://localhost:8080/classification/detectar_menciones', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
