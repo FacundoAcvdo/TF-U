@@ -10,6 +10,8 @@ import {
   Search,
   Users,
   Check,
+  Calendar,
+  Layers,
 } from 'lucide-react'
 
 import { AnalysisRunner } from '@/components/analysis-runner'
@@ -106,33 +108,24 @@ export function WordEvolutionView() {
             body: JSON.stringify({
               dataset: datasetSeleccionado,
             }),
-          },
+          }
         )
 
         if (!res.ok) {
           const errorData = await res.json().catch(() => null)
-
           setErrorUsuarios(
             errorData?.detail ??
-              'No se pudieron obtener los participantes de este dataset.',
+              'No se pudieron obtener los participantes de este dataset.'
           )
-
           return
         }
 
         const data = await res.json()
-
-        setUsuarios(
-          Array.isArray(data.usuarios) ? data.usuarios : [],
-        )
+        setUsuarios(Array.isArray(data.usuarios) ? data.usuarios : [])
       } catch (error) {
-        console.warn(
-          'Error de conexión al obtener usuarios:',
-          error,
-        )
-
+        console.warn('Error de conexión al obtener usuarios:', error)
         setErrorUsuarios(
-          'No se pudo conectar con el servidor para obtener los participantes.',
+          'No se pudo conectar con el servidor para obtener los participantes.'
         )
       } finally {
         setCargandoUsuarios(false)
@@ -144,13 +137,10 @@ export function WordEvolutionView() {
 
   const usuariosFiltrados = useMemo(() => {
     const texto = busqueda.trim().toLowerCase()
-
-    if (!texto) {
-      return usuarios
-    }
+    if (!texto) return usuarios
 
     return usuarios.filter((usuario) =>
-      usuario.remitente.toLowerCase().includes(texto),
+      usuario.remitente.toLowerCase().includes(texto)
     )
   }, [usuarios, busqueda])
 
@@ -159,11 +149,7 @@ export function WordEvolutionView() {
 
   const formatearFecha = (fecha: string) => {
     const partes = fecha.split('-')
-
-    if (partes.length !== 3) {
-      return fecha
-    }
-
+    if (partes.length !== 3) return fecha
     return `${partes[2]}/${partes[1]}/${partes[0]}`
   }
 
@@ -187,40 +173,28 @@ export function WordEvolutionView() {
             remitente: remitenteSeleccionado,
             top_k: 10,
           }),
-        },
+        }
       )
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => null)
-
         const mensaje =
           errorData?.detail ??
           'Ocurrió un error al calcular la evolución de palabras. Por favor, inténtelo de nuevo.'
-
-        console.warn(
-          'Error al calcular evolución:',
-          mensaje,
-        )
-
+        console.warn('Error al calcular evolución:', mensaje)
         setErrorMensaje(mensaje)
         setEstado('idle')
         return
       }
 
       const data = await res.json()
-
       setResultado(data)
       setEstado('done')
     } catch (error) {
-      console.warn(
-        'Error de conexión al calcular evolución:',
-        error,
-      )
-
+      console.warn('Error de conexión al calcular evolución:', error)
       setErrorMensaje(
-        'No se pudo conectar con el servidor. Por favor, inténtelo de nuevo.',
+        'No se pudo conectar con el servidor. Por favor, inténtelo de nuevo.'
       )
-
       setEstado('idle')
     }
   }
@@ -248,14 +222,13 @@ export function WordEvolutionView() {
       )}
 
       {!resultado && (
-        <>
+        <div className="flex flex-col gap-6 w-full">
           <Card className="w-full shadow-sm">
             <CardHeader className="pb-4 flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-base font-semibold">
                   Participantes
                 </CardTitle>
-
                 <p className="mt-1 text-xs text-muted-foreground">
                   Seleccioná un participante para aplicar la evolución de
                   palabras en el tiempo.
@@ -273,7 +246,6 @@ export function WordEvolutionView() {
               ) : usuarios.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Users className="mb-2 h-5 w-5 text-muted-foreground" />
-
                   <p className="text-sm text-muted-foreground">
                     Seleccioná un dataset para ver sus participantes.
                   </p>
@@ -283,12 +255,9 @@ export function WordEvolutionView() {
                   {mostrarBuscador && (
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-
                       <Input
                         value={busqueda}
-                        onChange={(e) =>
-                          setBusqueda(e.target.value)
-                        }
+                        onChange={(e) => setBusqueda(e.target.value)}
                         placeholder="Buscar participante..."
                         className="pl-9"
                         disabled={configuracionBloqueada}
@@ -301,8 +270,7 @@ export function WordEvolutionView() {
                       <div className="flex flex-col gap-1">
                         {usuariosFiltrados.map((usuario) => {
                           const seleccionado =
-                            remitenteSeleccionado ===
-                            usuario.remitente
+                            remitenteSeleccionado === usuario.remitente
 
                           return (
                             <button
@@ -310,9 +278,7 @@ export function WordEvolutionView() {
                               type="button"
                               disabled={configuracionBloqueada}
                               onClick={() =>
-                                setRemitenteSeleccionado(
-                                  usuario.remitente,
-                                )
+                                setRemitenteSeleccionado(usuario.remitente)
                               }
                               className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2.5 text-left transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 ${
                                 seleccionado
@@ -341,7 +307,6 @@ export function WordEvolutionView() {
                                   >
                                     {usuario.remitente}
                                   </p>
-
                                   <p
                                     className={`text-xs ${
                                       seleccionado
@@ -367,7 +332,6 @@ export function WordEvolutionView() {
                         {usuariosFiltrados.length === 0 && (
                           <div className="py-8 text-center">
                             <Search className="mx-auto mb-2 h-5 w-5 text-muted-foreground" />
-
                             <p className="text-sm text-muted-foreground">
                               No se encontraron participantes.
                             </p>
@@ -380,11 +344,8 @@ export function WordEvolutionView() {
                   <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
                     <span>
                       {usuarios.length}{' '}
-                      {usuarios.length === 1
-                        ? 'participante'
-                        : 'participantes'}
+                      {usuarios.length === 1 ? 'participante' : 'participantes'}
                     </span>
-
                     {remitenteSeleccionado && (
                       <span className="truncate max-w-[60%]">
                         Seleccionado:{' '}
@@ -399,83 +360,77 @@ export function WordEvolutionView() {
             </CardContent>
           </Card>
 
-          <AnalysisRunner
-            icon={TrendingUp}
-            runLabel="Ver evolución de palabras"
-            idleHint={
-              remitenteSeleccionado
-                ? `Analiza los mensajes de ${remitenteSeleccionado} y arma una línea de tiempo con sus palabras más usadas por período.`
-                : 'Seleccioná un participante para ver la evolución de sus palabras más usadas a lo largo del tiempo.'
-            }
-            estado={estado}
-            ejecutarFuncion={ejecutarEvolucion}
-          >
-            <div />
-          </AnalysisRunner>
-        </>
+          <div className="w-full">
+            <AnalysisRunner
+              icon={TrendingUp}
+              runLabel="Ver evolución de palabras"
+              idleHint={
+                remitenteSeleccionado
+                  ? `Analiza los mensajes de ${remitenteSeleccionado} y arma una línea de tiempo con sus palabras más usadas por período.`
+                  : 'Seleccioná un participante para ver la evolución de sus palabras más usadas a lo largo del tiempo.'
+              }
+              estado={estado}
+              ejecutarFuncion={ejecutarEvolucion}
+            >
+              <div />
+            </AnalysisRunner>
+          </div>
+        </div>
       )}
 
       {resultado && (
-        <Card className="w-full shadow-sm">
-          <CardHeader className="pb-3 border-b">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-sm font-semibold">
-                  Resultados del análisis
+        <Card className="w-full shadow-sm animate-in fade-in zoom-in-95 duration-300">
+          <CardHeader className="pb-4 border-b bg-muted/5">
+            <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+              
+              <div className="flex flex-col gap-1.5">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  Evolución de palabras
+                  <Badge variant="secondary" className="font-normal border bg-background shadow-sm">
+                    <User className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                    {resultado.remitente}
+                  </Badge>
                 </CardTitle>
+                
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  <div className="flex items-center gap-1.5 bg-background border px-2.5 py-1 rounded-md shadow-sm text-xs text-muted-foreground">
+                    <MessageSquare className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span><strong className="font-medium text-foreground">{resultado.total_mensajes.toLocaleString()}</strong> mensajes</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-1.5 bg-background border px-2.5 py-1 rounded-md shadow-sm text-xs text-muted-foreground">
+                    <Calendar className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span>
+                      <strong className="font-medium text-foreground">{formatearFecha(resultado.rango_fechas.desde)}</strong> 
+                      <span className="mx-1.5 opacity-50">—</span> 
+                      <strong className="font-medium text-foreground">{formatearFecha(resultado.rango_fechas.hasta)}</strong>
+                    </span>
+                  </div>
 
-                <Badge variant="secondary">
-                  {resultado.remitente}
-                </Badge>
+                  <div className="flex items-center gap-1.5 bg-background border px-2.5 py-1 rounded-md shadow-sm text-xs text-muted-foreground">
+                    <Layers className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span>Partición <strong className="font-medium text-foreground capitalize">{resultado.granularidad}</strong></span>
+                  </div>
+                </div>
               </div>
 
               <Button
                 size="sm"
                 variant="outline"
-                className="gap-1.5 text-xs h-8 cursor-pointer"
+                className="gap-1.5 text-xs h-8 cursor-pointer shrink-0 mt-1 sm:mt-0 w-full sm:w-auto"
                 onClick={handleReset}
               >
                 <Settings2 className="h-3.5 w-3.5" />
-                Cambiar participante
+                Cambiar configuración
               </Button>
             </div>
           </CardHeader>
 
-          <CardContent className="flex flex-col gap-5 py-5">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="rounded-md bg-muted/50 px-2.5 py-1.5 text-xs text-muted-foreground">
-                Mensajes:{' '}
-                <strong className="text-foreground">
-                  {resultado.total_mensajes.toLocaleString()}
-                </strong>
-              </div>
-
-              <div className="rounded-md bg-muted/50 px-2.5 py-1.5 text-xs text-muted-foreground">
-                Desde:{' '}
-                <strong className="text-foreground">
-                  {formatearFecha(resultado.rango_fechas.desde)}
-                </strong>
-              </div>
-
-              <div className="rounded-md bg-muted/50 px-2.5 py-1.5 text-xs text-muted-foreground">
-                Hasta:{' '}
-                <strong className="text-foreground">
-                  {formatearFecha(resultado.rango_fechas.hasta)}
-                </strong>
-              </div>
-
-              <div className="rounded-md bg-muted/50 px-2.5 py-1.5 text-xs text-muted-foreground">
-                Partición:{' '}
-                <strong className="text-foreground">
-                  {resultado.granularidad}
-                </strong>
-              </div>
-            </div>
-
+          <CardContent className="flex flex-col gap-4 py-5">
             <div className="relative">
               <div className="mb-2 flex items-center justify-between px-1">
                 <span className="text-xs font-medium text-muted-foreground">
-                  Línea de tiempo
+                  Línea de tiempo horizontal
                 </span>
 
                 {resultado.periodos.length > 1 && (
@@ -485,74 +440,90 @@ export function WordEvolutionView() {
                 )}
               </div>
 
-              <div className="overflow-x-auto overflow-y-hidden rounded-lg border bg-muted/10 px-2 pb-4 pt-3 scrollbar-thin scrollbar-track-muted/30 scrollbar-thumb-muted-foreground/40">
-                <div className="relative flex min-w-max gap-6 px-2 pt-1">
-                  <div className="absolute left-2 right-2 top-[19px] h-px bg-border" />
+              <div className="overflow-x-auto overflow-y-auto rounded-lg border bg-muted/10 px-2 pb-6 pt-6 scrollbar-thin scrollbar-track-muted/30 scrollbar-thumb-muted-foreground/40">
+                
+                <div className="relative flex min-w-max items-center h-[520px] px-8">
+                  
+                  <div className="absolute left-0 right-0 top-1/2 h-px bg-border -translate-y-1/2 z-0" />
 
-                  {resultado.periodos.map((periodo, index) => (
-                    <div
-                      key={periodo.etiqueta}
-                      className="relative flex w-[280px] shrink-0 flex-col items-center"
-                    >
-                      <div className="relative z-10 flex h-4 w-full items-center justify-center">
-                        <div className="flex size-4 items-center justify-center rounded-full border-2 border-background bg-primary ring-1 ring-primary/30" />
-                      </div>
+                  {resultado.periodos.map((periodo, index) => {
+                    const isTop = index % 2 === 0
 
-                      <div className="relative mt-4 w-full">
-                        <div className="absolute left-1/2 top-[-10px] z-10 -translate-x-1/2">
-                          <div className="h-0 w-0 border-l-[5px] border-r-[5px] border-t-[7px] border-l-transparent border-r-transparent border-t-primary" />
-                        </div>
+                    return (
+                      <div
+                        key={periodo.etiqueta}
+                        className="relative flex flex-col items-center w-[296px] shrink-0"
+                      >
+                        <div className="absolute top-1/2 left-1/2 w-4 h-4 rounded-full border-2 border-primary bg-background ring-4 ring-background -translate-x-1/2 -translate-y-1/2 z-10" />
 
-                        <div className="rounded-lg border bg-background p-3.5 shadow-sm">
-                          <div className="flex items-start justify-between gap-3 border-b pb-2.5">
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-foreground">
-                                {periodo.etiqueta}
-                              </p>
+                        <div
+                          className={`absolute left-1/2 w-px bg-border -translate-x-1/2 z-0 ${
+                            isTop ? 'bottom-1/2 h-6' : 'top-1/2 h-6'
+                          }`}
+                        />
 
-                              <p className="mt-0.5 text-[11px] text-muted-foreground">
-                                {formatearFecha(
-                                  periodo.fecha_inicio,
-                                )}{' '}
-                                —{' '}
-                                {formatearFecha(
-                                  periodo.fecha_fin,
-                                )}
-                              </p>
+                        <div
+                          className={`absolute left-1/2 -translate-x-1/2 w-[280px] z-20 ${
+                            isTop ? 'bottom-1/2 mb-6' : 'top-1/2 mt-6'
+                          }`}
+                        >
+                          {isTop ? (
+                            <>
+                              <div className="absolute left-1/2 -bottom-[6px] -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[6px] border-l-transparent border-r-transparent border-b-border z-10" />
+                              <div className="absolute left-1/2 -bottom-[4.5px] -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[6px] border-l-transparent border-r-transparent border-b-background z-20" />
+                            </>
+                          ) : (
+                            <>
+                              <div className="absolute left-1/2 -top-[6px] -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-border z-10" />
+                              <div className="absolute left-1/2 -top-[4.5px] -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-background z-20" />
+                            </>
+                          )}
+
+                          <div className="w-full rounded-xl border bg-background shadow-sm hover:shadow-md transition-shadow">
+                            <div className="p-4 flex flex-col gap-3">
+                              <div className="flex items-start justify-between border-b pb-3">
+                                <div className="min-w-0 pr-2">
+                                  <p className="text-sm font-semibold text-foreground truncate">
+                                    {periodo.etiqueta}
+                                  </p>
+
+                                  <p className="mt-0.5 text-[11px] text-muted-foreground truncate">
+                                    {formatearFecha(periodo.fecha_inicio)} —{' '}
+                                    {formatearFecha(periodo.fecha_fin)}
+                                  </p>
+                                </div>
+
+                                <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-md">
+                                  <MessageSquare className="h-3.5 w-3.5" />
+                                  {periodo.cantidad_mensajes.toLocaleString()}
+                                </span>
+                              </div>
+
+                              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                {periodo.palabras_top.map((p) => (
+                                  <Badge
+                                    key={p.palabra}
+                                    variant="secondary"
+                                    className="text-xs font-normal"
+                                  >
+                                    {p.palabra}
+                                    <span className="ml-1 text-muted-foreground">
+                                      ({p.cantidad})
+                                    </span>
+                                  </Badge>
+                                ))}
+                              </div>
                             </div>
-
-                            <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
-                              <MessageSquare className="h-3.5 w-3.5" />
-                              {periodo.cantidad_mensajes.toLocaleString()}
-                            </span>
-                          </div>
-
-                          <div className="flex flex-wrap gap-1.5 pt-3">
-                            {periodo.palabras_top.map(
-                              (palabra) => (
-                                <Badge
-                                  key={palabra.palabra}
-                                  variant="secondary"
-                                  className="text-xs font-normal"
-                                >
-                                  {palabra.palabra}
-
-                                  <span className="ml-1 text-muted-foreground">
-                                    ({palabra.cantidad})
-                                  </span>
-                                </Badge>
-                              ),
-                            )}
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
 
-              <div className="mt-2 flex items-center justify-between px-1 text-[11px] text-muted-foreground">
-                <span>
+              <div className="mt-4 flex items-center justify-between px-1 text-xs text-muted-foreground">
+                <span className="rounded-full border bg-muted/20 px-3 py-1.5">
                   {resultado.periodos.length}{' '}
                   {resultado.periodos.length === 1
                     ? 'período analizado'
@@ -560,11 +531,12 @@ export function WordEvolutionView() {
                 </span>
 
                 {resultado.periodos.length > 1 && (
-                  <span className="font-medium">
+                  <span className="rounded-full border bg-muted/20 px-3 py-1.5 font-medium">
                     ← desplazate →
                   </span>
                 )}
               </div>
+
             </div>
           </CardContent>
         </Card>
