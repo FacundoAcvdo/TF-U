@@ -1,6 +1,6 @@
 'use client'
 
-import { Layers, FileText, Hash, AlertCircle } from 'lucide-react'
+import { Layers, FileText, Hash, AlertCircle, Settings2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { AnalysisRunner } from '@/components/analysis-runner'
@@ -11,6 +11,13 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 import {
   Dialog,
@@ -42,19 +49,21 @@ type TopicModelingResult = {
   topics: TopicModelingTopic[]
 }
 
-function ExpandableDocument({ 
-  document, 
-  index 
-}: { 
+const MAX_TOPICS_OPTIONS = [5, 10, 15, 20, 25, 30, 35, 40]
+
+function ExpandableDocument({
+  document,
+  index,
+}: {
   document: { document_id: string; text: string }
-  index: number 
+  index: number
 }) {
   const [isExpanded, setIsExpanded] = useState(false)
   const MAX_CHARS = 275
 
   const isLong = document.text.length > MAX_CHARS
-  const displayedText = isExpanded || !isLong 
-    ? document.text 
+  const displayedText = isExpanded || !isLong
+    ? document.text
     : `${document.text.slice(0, MAX_CHARS)} ...`
 
   return (
@@ -79,8 +88,8 @@ function ExpandableDocument({
 }
 
 export function TopicsView() {
-  const [estado, setEstado] = useState<
-    'idle' | 'done' | 'running'
+  const [estado, setEstado] = useState
+    <'idle' | 'done' | 'running'
   >('idle')
 
   const [topics, setTopics] =
@@ -88,6 +97,8 @@ export function TopicsView() {
 
   const [selectedTopicId, setSelectedTopicId] =
     useState<number | null>(null)
+
+  const [maxTopics, setMaxTopics] = useState<number>(20)
 
   const { datasetSeleccionado } = useDataset()
 
@@ -98,7 +109,10 @@ export function TopicsView() {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dataset: datasetSeleccionado }),
+      body: JSON.stringify({
+        dataset: datasetSeleccionado,
+        max_topics: maxTopics,
+      }),
     })
 
     if (!respuesta.ok) {
@@ -123,166 +137,203 @@ export function TopicsView() {
   )
 
   return (
-    <AnalysisRunner
-      icon={Layers}
-      runLabel="Extraer tópicos"
-      idleHint="Aplica modelado de tópicos con BERTopic sobre el corpus para descubrir los temas latentes y sus términos representativos."
-      estado={estado}
-      ejecutarFuncion={ejecutarTopicModeling}
-    >
-      {topics && (
-        <div className="space-y-6">
-
-          <div className="grid gap-4 md:grid-cols-3">
-
-            <Card>
-              <CardContent className="flex items-center gap-4 p-5">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
-                  <FileText className="size-5 text-primary" />
-                </div>
-
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Documentos
-                  </p>
-
-                  <p className="text-2xl font-semibold">
-                    {topics.document_count.toLocaleString()}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="flex items-center gap-4 p-5">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
-                  <Hash className="size-5 text-primary" />
-                </div>
-
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Tópicos
-                  </p>
-
-                  <p className="text-2xl font-semibold">
-                    {topics.topic_count}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="flex items-center gap-4 p-5">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
-                  <AlertCircle className="size-5 text-muted-foreground" />
-                </div>
-
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Outliers
-                  </p>
-
-                  <p className="text-2xl font-semibold">
-                    {topics.outlier_percentage.toFixed(1)}%
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
+    <div className="space-y-4">
+      <Card>
+        <CardContent className="flex items-center justify-between gap-4 p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
+              <Settings2 className="size-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">
+                Cantidad máxima de tópicos
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Definí un tope para el modelado de tópicos.
+              </p>
+            </div>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Principales tópicos</CardTitle>
-
-              <p className="text-sm text-muted-foreground">
-                Los tópicos están ordenados según su presencia
-                en el corpus. Seleccioná uno para ver más
-                información.
-              </p>
-            </CardHeader>
-
-            <CardContent>
-              <div className="space-y-2">
-                {topics.topics.map((topic) => (
-                  <TopicRanking
-                    key={topic.topic_id}
-                    topic={topic}
-                    selected={
-                      topic.topic_id === selectedTopicId
-                    }
-                    onClick={() =>
-                      setSelectedTopicId(topic.topic_id)
-                    }
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Dialog
-            open={selectedTopic !== undefined}
-            onOpenChange={(open) => {
-              if (!open) {
-                setSelectedTopicId(null)
-              }
-            }}
+          <Select
+            value={String(maxTopics)}
+            onValueChange={(value) => setMaxTopics(Number(value))}
+            disabled={estado === 'running'}
           >
-            {selectedTopic && (
-              <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
-                <DialogHeader>
-                  <div className="flex items-start gap-4 pr-8">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-3">
-                        <DialogTitle>Topic {selectedTopic.topic_id + 1}</DialogTitle>
-                        <Badge variant="secondary">
-                          {selectedTopic.percentage.toFixed(1)}%
-                        </Badge>
-                      </div>
-                      <DialogDescription className="mt-1">
-                        {selectedTopic.document_count.toLocaleString()} documentos pertenecen a este tópico.
-                      </DialogDescription>
-                    </div>
-                  </div>
-                </DialogHeader>
+            <SelectTrigger className="w-28">
+              <SelectValue placeholder="Máximo" />
+            </SelectTrigger>
+            <SelectContent>
+              {MAX_TOPICS_OPTIONS.map((value) => (
+                <SelectItem key={value} value={String(value)}>
+                  {value}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
 
-                <div className="space-y-4 pt-2">
+      <AnalysisRunner
+        icon={Layers}
+        runLabel="Extraer tópicos"
+        idleHint="Aplica modelado de tópicos con BERTopic sobre el corpus para descubrir los temas latentes y sus términos representativos."
+        estado={estado}
+        ejecutarFuncion={ejecutarTopicModeling}
+      >
+        {topics && (
+          <div className="space-y-6">
+
+            <div className="grid gap-4 md:grid-cols-3">
+
+              <Card>
+                <CardContent className="flex items-center gap-4 p-5">
+                  <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
+                    <FileText className="size-5 text-primary" />
+                  </div>
+
                   <div>
-                    <h4 className="mb-2 text-sm font-medium">Términos representativos</h4>
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedTopic.keywords.map((keyword, indice) => (
-                        <Badge key={indice} variant="outline" className="text-xs">
-                          {keyword}
-                        </Badge>
-                      ))}
-                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Documentos
+                    </p>
+
+                    <p className="text-2xl font-semibold">
+                      {topics.document_count.toLocaleString()}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="flex items-center gap-4 p-5">
+                  <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
+                    <Hash className="size-5 text-primary" />
                   </div>
 
                   <div>
-                    <div className="mb-2">
-                      <h4 className="text-sm font-medium">Documentos representativos</h4>
-                      <p className="text-xs text-muted-foreground">
-                        Algunos documentos representativos de este tópico.
-                      </p>
-                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Tópicos
+                    </p>
 
-                    <div className="space-y-3">
-                      {selectedTopic.representative_documents.map((document, index) => (
-                        <ExpandableDocument
-                          key={document.document_id}
-                          document={document}
-                          index={index}
-                        />
-                      ))}
-                    </div>
+                    <p className="text-2xl font-semibold">
+                      {topics.topic_count}
+                    </p>
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="flex items-center gap-4 p-5">
+                  <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
+                    <AlertCircle className="size-5 text-muted-foreground" />
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Outliers
+                    </p>
+
+                    <p className="text-2xl font-semibold">
+                      {topics.outlier_percentage.toFixed(1)}%
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Principales tópicos</CardTitle>
+
+                <p className="text-sm text-muted-foreground">
+                  Los tópicos están ordenados según su presencia
+                  en el corpus. Seleccioná uno para ver más
+                  información.
+                </p>
+              </CardHeader>
+
+              <CardContent>
+                <div className="space-y-2">
+                  {topics.topics.map((topic) => (
+                    <TopicRanking
+                      key={topic.topic_id}
+                      topic={topic}
+                      selected={
+                        topic.topic_id === selectedTopicId
+                      }
+                      onClick={() =>
+                        setSelectedTopicId(topic.topic_id)
+                      }
+                    />
+                  ))}
                 </div>
-              </DialogContent>
-            )}
-          </Dialog>
-        </div>
-      )}
-    </AnalysisRunner>
+              </CardContent>
+            </Card>
+
+            <Dialog
+              open={selectedTopic !== undefined}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setSelectedTopicId(null)
+                }
+              }}
+            >
+              {selectedTopic && (
+                <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
+                  <DialogHeader>
+                    <div className="flex items-start gap-4 pr-8">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-3">
+                          <DialogTitle>Topic {selectedTopic.topic_id + 1}</DialogTitle>
+                          <Badge variant="secondary">
+                            {selectedTopic.percentage.toFixed(1)}%
+                          </Badge>
+                        </div>
+                        <DialogDescription className="mt-1">
+                          {selectedTopic.document_count.toLocaleString()} documentos pertenecen a este tópico.
+                        </DialogDescription>
+                      </div>
+                    </div>
+                  </DialogHeader>
+
+                  <div className="space-y-4 pt-2">
+                    <div>
+                      <h4 className="mb-2 text-sm font-medium">Términos representativos</h4>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedTopic.keywords.map((keyword, indice) => (
+                          <Badge key={indice} variant="outline" className="text-xs">
+                            {keyword}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="mb-2">
+                        <h4 className="text-sm font-medium">Documentos representativos</h4>
+                        <p className="text-xs text-muted-foreground">
+                          Algunos documentos representativos de este tópico.
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        {selectedTopic.representative_documents.map((document, index) => (
+                          <ExpandableDocument
+                            key={document.document_id}
+                            document={document}
+                            index={index}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </DialogContent>
+              )}
+            </Dialog>
+          </div>
+        )}
+      </AnalysisRunner>
+    </div>
   )
 }
 
