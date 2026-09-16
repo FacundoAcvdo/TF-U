@@ -144,6 +144,11 @@ const LANGUAGE_OPTIONS: {
   label: string;
   description: string;
 }[] = [
+    {
+    value: "bilingual",
+    label: "Bilingüe",
+    description: "Preparado para datasets bilingües.",
+  },
   {
     value: "en",
     label: "Inglés",
@@ -153,12 +158,7 @@ const LANGUAGE_OPTIONS: {
     value: "es",
     label: "Español",
     description: "Usa el modelo lingüístico de español.",
-  },
-  {
-    value: "bilingual",
-    label: "Bilingüe",
-    description: "Preparado para datasets bilingües.",
-  },
+  }
 ];
 
 export function CleaningConfig({
@@ -183,6 +183,8 @@ export function CleaningConfig({
 
     if (!operations.includes("lemmatization")) {
       nextConfig.language = null;
+    } else if (!config.language) {
+      nextConfig.language = "bilingual";
     }
 
     onChange(nextConfig);
@@ -481,7 +483,7 @@ export function CleaningConfig({
 
           <CardContent className="space-y-4">
             <Select
-              value={config.language ?? undefined}
+              value={config.language ?? "bilingual"}
               onValueChange={(value) =>
                 setLanguage(value as CleaningLanguage)
               }
@@ -501,14 +503,6 @@ export function CleaningConfig({
                 ))}
               </SelectContent>
             </Select>
-
-            {config.language === "bilingual" && (
-              <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-                La opción bilingüe está preparada para futuras
-                versiones. Actualmente la lematización bilingüe
-                requiere detección de idioma por documento.
-              </div>
-            )}
           </CardContent>
         </Card>
       )}

@@ -30,7 +30,7 @@ const DEFAULT_CONFIG: CleaningConfigType = {
   operations: [],
   emoji_strategy: "keep",
   hashtag_strategy: "keep",
-  language: null,
+  language: "bilingual",
 };
 
 export function CleaningView() {
@@ -72,16 +72,6 @@ export function CleaningView() {
       return;
     }
 
-    if (
-      config.operations.includes("lemmatization") &&
-      config.language === "bilingual"
-    ) {
-      setError(
-        "La lematización bilingüe todavía no está implementada.",
-      );
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -102,7 +92,7 @@ export function CleaningView() {
 
             hashtag_strategy: config.hashtag_strategy,
 
-            language: config.language ?? null,
+            language: config.language ?? "bilingual",
           }),
         },
       );
