@@ -206,7 +206,7 @@ export function WordEvolutionView() {
   }
 
   return (
-    <div className="w-full max-w-5xl mx-auto flex flex-col gap-6 py-4">
+    <div className="w-full flex flex-col gap-6 py-4">
       {errorUsuarios && (
         <div className="flex items-center gap-2.5 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           <TriangleAlert className="h-4 w-4 shrink-0" />
@@ -266,8 +266,8 @@ export function WordEvolutionView() {
                   )}
 
                   <div className="rounded-lg border">
-                    <div className="max-h-[220px] overflow-y-auto p-1.5">
-                      <div className="flex flex-col gap-1">
+                    <div className="max-h-[220px] overflow-y-auto p-1.5 scrollbar-thin scrollbar-track-muted/30 scrollbar-thumb-muted-foreground/40">
+                      <div className="flex flex-col gap-1 pr-1">
                         {usuariosFiltrados.map((usuario) => {
                           const seleccionado =
                             remitenteSeleccionado === usuario.remitente
@@ -421,7 +421,7 @@ export function WordEvolutionView() {
                 onClick={handleReset}
               >
                 <Settings2 className="h-3.5 w-3.5" />
-                Cambiar configuración
+                Cambiar participante
               </Button>
             </div>
           </CardHeader>
@@ -442,7 +442,7 @@ export function WordEvolutionView() {
 
               <div className="overflow-x-auto overflow-y-auto rounded-lg border bg-muted/10 px-2 pb-6 pt-6 scrollbar-thin scrollbar-track-muted/30 scrollbar-thumb-muted-foreground/40">
                 
-                <div className="relative flex min-w-max items-center h-[520px] px-8">
+                <div className="relative flex min-w-max items-center h-[520px] px-16">
                   
                   <div className="absolute left-0 right-0 top-1/2 h-px bg-border -translate-y-1/2 z-0" />
 
@@ -452,19 +452,19 @@ export function WordEvolutionView() {
                     return (
                       <div
                         key={periodo.etiqueta}
-                        className="relative flex flex-col items-center w-[296px] shrink-0"
+                        className="relative flex flex-col items-center w-[200px] shrink-0"
                       >
                         <div className="absolute top-1/2 left-1/2 w-4 h-4 rounded-full border-2 border-primary bg-background ring-4 ring-background -translate-x-1/2 -translate-y-1/2 z-10" />
 
                         <div
                           className={`absolute left-1/2 w-px bg-border -translate-x-1/2 z-0 ${
-                            isTop ? 'bottom-1/2 h-6' : 'top-1/2 h-6'
+                            isTop ? 'bottom-1/2 h-12' : 'top-1/2 h-12'
                           }`}
                         />
 
                         <div
                           className={`absolute left-1/2 -translate-x-1/2 w-[280px] z-20 ${
-                            isTop ? 'bottom-1/2 mb-6' : 'top-1/2 mt-6'
+                            isTop ? 'bottom-1/2 mb-12' : 'top-1/2 mt-12'
                           }`}
                         >
                           {isTop ? (
