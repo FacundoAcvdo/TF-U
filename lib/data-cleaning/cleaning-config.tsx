@@ -7,6 +7,8 @@ import {
   Smile,
 } from "lucide-react";
 
+import { toast } from "sonner";
+
 import {
   Card,
   CardContent,
@@ -25,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import {
+import type{
   CleaningConfig as CleaningConfigType,
   CleaningLanguage,
   CleaningOperation,
@@ -42,6 +44,31 @@ interface OperationOption {
   description: string;
 }
 
+// Operaciones que requieren que el usuario indique un idioma.
+const LANGUAGE_DEPENDENT_OPERATIONS: CleaningOperation[] = [
+  "lemmatization",
+  "truncation",
+];
+
+// Lematización y truncado normalizan palabras con métodos
+// distintos e incompatibles entre sí: aplicar una sobre el
+// resultado de la otra rompe el texto (ej: el lematizador no
+// puede reconocer una raíz truncada como "corr"). Por eso son
+// mutuamente excluyentes.
+  const MUTUALLY_EXCLUSIVE_OPERATIONS: Partial<
+    Record<CleaningOperation, CleaningOperation>> = 
+  {
+    lemmatization: "truncation",
+    truncation: "lemmatization",
+  };
+
+  const OPERATION_LABELS: Partial<
+    Record<CleaningOperation, string>
+  > = {
+    lemmatization: "Lematización",
+    truncation: "Truncado",
+  };
+
 const OPERATIONS: OperationOption[] = [
   {
     value: "lowercase",
@@ -57,11 +84,6 @@ const OPERATIONS: OperationOption[] = [
     value: "remove_mentions",
     label: "Eliminar menciones",
     description: "Elimina menciones como @usuario.",
-  },
-  {
-    value: "remove_html",
-    label: "Eliminar HTML",
-    description: "Elimina etiquetas HTML del texto.",
   },
   {
     value: "normalize_whitespace",
@@ -86,7 +108,16 @@ const OPERATIONS: OperationOption[] = [
   {
     value: "lemmatization",
     label: "Lematización",
-    description: "Convierte las palabras a su forma léxica base.",
+    description:
+      "Convierte las palabras a su forma léxica base. " +
+      "No se puede combinar con Truncado.",
+  },
+  {
+    value: "truncation",
+    label: "Truncado",
+    description:
+      "Reduce las palabras a su raíz (stemming). " +
+      "No se puede combinar con Lematización.",
   },
   {
     value: "anonymization",
@@ -167,21 +198,52 @@ export function CleaningConfig({
 }: CleaningConfigProps) {
   const hasEmojis = config.operations.includes("handle_emojis");
   const hasHashtags = config.operations.includes("handle_hashtags");
-  const hasLemmatization = config.operations.includes("lemmatization");
+
+  const hasLanguageDependentOperation =
+    config.operations.some((operation) =>
+      LANGUAGE_DEPENDENT_OPERATIONS.includes(operation),
+    );
 
   const toggleOperation = (operation: CleaningOperation) => {
     const exists = config.operations.includes(operation);
 
-    const operations = exists
+    let operations = exists
       ? config.operations.filter((item) => item !== operation)
       : [...config.operations, operation];
+
+    // Swap automático: si se activa una operación que tiene un
+    // conflicto, se desactiva la otra y se avisa al usuario.
+    if (!exists) {
+      const conflict = MUTUALLY_EXCLUSIVE_OPERATIONS[operation];
+
+      if (conflict && operations.includes(conflict)) {
+        operations = operations.filter(
+          (item) => item !== conflict,
+        );
+
+        toast.info(
+          `Se desactivó "${OPERATION_LABELS[conflict]}"`,
+          {
+            description:
+              `Lematización y truncado no se pueden aplicar ` +
+              `juntas, así que al activar ` +
+              `"${OPERATION_LABELS[operation]}" se desactivó ` +
+              `la otra automáticamente.`,
+          },
+        );
+      }
+    }
 
     const nextConfig: CleaningConfigType = {
       ...config,
       operations,
     };
 
-    if (!operations.includes("lemmatization")) {
+    const stillNeedsLanguage = operations.some((item) =>
+      LANGUAGE_DEPENDENT_OPERATIONS.includes(item),
+    );
+
+    if (!stillNeedsLanguage) {
       nextConfig.language = null;
     } else if (!config.language) {
       nextConfig.language = "bilingual";
@@ -225,6 +287,8 @@ export function CleaningConfig({
           <CardDescription>
             Selecciona las transformaciones que quieres aplicar al dataset.
             Las operaciones se ejecutarán en el orden definido por el backend.
+            Lematización y truncado son técnicas alternativas para
+            normalizar palabras, por lo que no pueden aplicarse juntas.
           </CardDescription>
         </CardHeader>
 
@@ -468,16 +532,17 @@ export function CleaningConfig({
       )}
 
       {/* Idioma */}
-      {hasLemmatization && (
+      {hasLanguageDependentOperation && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Languages className="h-5 w-5" />
-              Idioma para lematización
+              Idioma para lematización / truncado
             </CardTitle>
 
             <CardDescription>
-              La lematización necesita conocer el idioma del dataset.
+              La lematización y el truncado necesitan conocer el
+              idioma del dataset.
             </CardDescription>
           </CardHeader>
 

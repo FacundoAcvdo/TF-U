@@ -153,12 +153,6 @@ export function CleaningResult({
             />
 
             <StatCard
-              label="HTML eliminado"
-              value={stats.removed_html}
-              icon={<FileText className="h-5 w-5" />}
-            />
-
-            <StatCard
               label="Emojis procesados"
               value={stats.emojis_processed}
               icon={<Smile className="h-5 w-5" />}
@@ -207,6 +201,11 @@ export function CleaningResult({
               label="Lemas procesados"
               value={stats.lemmas_processed}
             />
+
+            <Metric
+              label="Truncados procesados"
+              value={stats.truncated_words}
+            />            
 
             <Metric
               label="Términos únicos originales"

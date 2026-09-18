@@ -2,7 +2,7 @@ export type CleaningOperation =
   | "lowercase"
   | "remove_urls"
   | "remove_mentions"
-  | "remove_html"
+  | "truncation"
   | "normalize_whitespace"
   | "remove_duplicates"
   | "handle_hashtags"
@@ -47,7 +47,6 @@ export interface CleaningStats {
   removed_duplicates: number;
   removed_urls: number;
   removed_mentions: number;
-  removed_html: number;
 
   normalized_whitespace: number;
 
@@ -57,6 +56,7 @@ export interface CleaningStats {
   punctuation_removed: number;
   stopwords_removed: number;
   lemmas_processed: number;
+  truncated_words: number;
   entities_anonymized: number;
 }
 
