@@ -12,7 +12,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { Card, CardContent, CardHeader } from '../ui/card'
+import { EdaSentenceBoxPlot } from '@/components/charts/eda-sentence-boxplot'
+import { EdaSentenceFreq } from '@/components/charts/eda-sentence-freq'
+import { EdaClassDistribution } from '@/components/charts/eda-class-distribution'
+import { EdaDistribution } from '@/components/charts/eda-distribution'
 
 interface DF_STATS {
   sentence_avg: number,
@@ -29,90 +33,70 @@ interface DF_CLASS_STATS extends DF_STATS {
   clase: string
 }
 
-interface IMAGES {
-  boxplot: string
-  catplot: string
-  class_distribution: string
-  distribution: string
-}
-
 interface EDA_RESPONSE {
+  dataset_id: string
   corpus_stats: DF_STATS
   class_stats: DF_CLASS_STATS[]
-  images: IMAGES
+  sentence_stats: { min: number; max: number; median: number; q25: number; q75: number; mean: number; std: number; count: number }
+  sentence_freq: { sentences: number; count: number; bin_end?: number }[]
+  distribution: { clase: string; words_histogram: { bin_start: number; bin_end: number; count: number }[]; sentences_histogram: { bin_start: number; bin_end: number; count: number }[]; words_stats: any; sentences_stats: any }[]
 }
 
 export function StatsView() {
   const [estado, setEstado] = useState<'idle' | 'done' | 'running'>('idle')
 
-  const [publicUrls, setPublicUrls] = useState<IMAGES | null>(null)
-
   const [stats, setStats] = useState<DF_STATS | null>(null)
   const [classStats, setClassStats] = useState<DF_CLASS_STATS[] | null>(null)
+  const [sentenceStats, setSentenceStats] = useState<EDA_RESPONSE["sentence_stats"] | null>(null)
+  const [sentenceFreq, setSentenceFreq] = useState<EDA_RESPONSE["sentence_freq"] | null>(null)
+  const [distribution, setDistribution] = useState<EDA_RESPONSE["distribution"] | null>(null)
 
   const { datasetSeleccionado } = useDataset()
 
   const ejecutarEda = async () => {
     setEstado('running')
-
     const respuesta = await fetch('http://localhost:8080/eda/eda', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ dataset: datasetSeleccionado }),
     })
-
     if (!respuesta.ok) {
-      console.error('Error al calcular realizar el analisis exploratorio:', respuesta.statusText)
+      console.error('Error al calcular eda:', respuesta.statusText)
       setEstado('idle')
       return
     }
-
     const data : EDA_RESPONSE = await respuesta.json()
-
-    setPublicUrls(data.images)
     setStats(data.corpus_stats)
     setClassStats(data.class_stats)
-    
+    setSentenceStats(data.sentence_stats)
+    setSentenceFreq(data.sentence_freq)
+    setDistribution(data.distribution)
     setEstado('done')
   }
 
   useEffect(() => {
       if (!datasetSeleccionado) return
-
       const fetchResults = async () => {
         try {
           setEstado('running')
-  
           const respuesta = await fetch('http://localhost:8080/eda/getResults', {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ dataset: datasetSeleccionado }),
           })  
-          if (!respuesta.ok) {
-            setEstado('idle')
-            return
-          }
-  
+          if (!respuesta.ok) { setEstado('idle'); return }
           const data : EDA_RESPONSE = await respuesta.json()
-
-          if (!data.images || !data.corpus_stats || !data.class_stats) {
-            setEstado('idle')
-            return
-          }
-
-          setPublicUrls(data.images)
+          if (!data.corpus_stats || !data.class_stats) { setEstado('idle'); return }
           setStats(data.corpus_stats)
           setClassStats(data.class_stats)
-
+          setSentenceStats(data.sentence_stats)
+          setSentenceFreq(data.sentence_freq)
+          setDistribution(data.distribution)
           setEstado('done')
-        } catch (error) {
-          setEstado('idle')
-          return
-        }
+        } catch { setEstado('idle') }
       }
-  
       fetchResults()
     }, [datasetSeleccionado])
 
@@ -120,17 +104,17 @@ export function StatsView() {
     <AnalysisRunner
       icon={ChartColumn}
       runLabel="Calcular estadísticas"
-      idleHint="Genera el resumen descriptivo del dataset cargado: número de registros, usuarios, longitud media de los mensajes y distribución temporal."
+      idleHint="Genera el resumen descriptivo del dataset cargado."
       ejecutarFuncion={ejecutarEda}
       estado={estado}
     >
-      <Card>
-        <CardHeader>
-          <CardTitle>Analisis exploratorio</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-10">
-          <div className="flex flex-col">
-            <h3 className="mb-3 text-base font-semibold">Estadísticas de corpus</h3>
+      <div className="flex flex-col gap-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <h3 className="text-sm font-semibold tracking-tight">Estadísticas de corpus</h3>
+            <p className="text-xs text-muted-foreground">Resumen general del dataset</p>
+          </CardHeader>
+          <CardContent className="pt-0 flex flex-col gap-6">
             <Table className="[&_th:nth-child(even)]:bg-muted/40 [&_td:nth-child(even)]:bg-muted/40">
               <TableHeader>
                 <TableRow>
@@ -157,10 +141,7 @@ export function StatsView() {
                 </TableRow>
               </TableBody>
             </Table>
-          </div>
 
-          <div className="flex flex-col">
-            <h3 className="mb-3 text-base font-semibold">Estadísticas por clase</h3>
             <Table className="[&_th:nth-child(even)]:bg-muted/40 [&_td:nth-child(even)]:bg-muted/40">
               <TableHeader>
                 <TableRow>
@@ -176,61 +157,61 @@ export function StatsView() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {classStats?.map((stats, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="text-left text-base">{stats?.clase}</TableCell>
-                    <TableCell className="text-right text-base">{stats?.texto}</TableCell>
-                    <TableCell className="text-right text-base">{stats?.vocabulary}</TableCell>
-                    <TableCell className="text-right text-base">{stats?.words}</TableCell>
-                    <TableCell className="text-right text-base">{stats?.word_avg}</TableCell>
-                    <TableCell className="text-right text-base">{stats?.sentences}</TableCell>
-                    <TableCell className="text-right text-base">{stats?.sentence_avg}</TableCell>
-                    <TableCell className="text-right text-base">{stats?.sentence_min}</TableCell>
-                    <TableCell className="text-right text-base">{stats?.sentence_max}</TableCell>
+                {classStats?.map((s, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="text-left text-base">{s?.clase}</TableCell>
+                    <TableCell className="text-right text-base">{s?.texto}</TableCell>
+                    <TableCell className="text-right text-base">{s?.vocabulary}</TableCell>
+                    <TableCell className="text-right text-base">{s?.words}</TableCell>
+                    <TableCell className="text-right text-base">{s?.word_avg}</TableCell>
+                    <TableCell className="text-right text-base">{s?.sentences}</TableCell>
+                    <TableCell className="text-right text-base">{s?.sentence_avg}</TableCell>
+                    <TableCell className="text-right text-base">{s?.sentence_min}</TableCell>
+                    <TableCell className="text-right text-base">{s?.sentence_max}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </CardContent>
+        </Card>
 
-          <div className="flex w-full gap-4">
-            {publicUrls && (
-              <img
-                src={publicUrls?.boxplot}
-                className="h-auto w-full max-w-[50%] flex-1 object-contain border rounded-lg"
-                alt="Boxplot de la distribución de oraciones"
-              />
-            )}
-            {publicUrls && (
-              <img
-                src={publicUrls?.catplot}
-                className="h-auto w-full max-w-[50%] flex-1 object-contain border rounded-lg"
-                alt="Catplot de la distribución de oraciones"
-              />
-            )}
-          </div>
+        {sentenceStats && sentenceFreq && (
+          <Card>
+            <CardHeader className="pb-3">
+              <h3 className="text-sm font-semibold tracking-tight">Distribución de oraciones</h3>
+              <p className="text-xs text-muted-foreground">Boxplot + histograma — hover para detalles</p>
+            </CardHeader>
+            <CardContent className="pt-0 flex flex-col gap-4">
+              <EdaSentenceBoxPlot stats={sentenceStats} />
+              <EdaSentenceFreq data={sentenceFreq} />
+            </CardContent>
+          </Card>
+        )}
 
-          <div className="w-full">
-            {publicUrls && (
-              <img
-                src={publicUrls.distribution}
-                className="h-auto w-full object-contain border rounded-lg"
-                alt="Distribución de palabras y oraciones"
-              />
-            )}
-          </div>
+        {classStats && (
+          <Card>
+            <CardHeader className="pb-3">
+              <h3 className="text-sm font-semibold tracking-tight">Distribución por clase</h3>
+              <p className="text-xs text-muted-foreground">Comparativa de métricas por clase</p>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <EdaClassDistribution classStats={classStats} />
+            </CardContent>
+          </Card>
+        )}
 
-          <div className="w-full">
-            {publicUrls && (
-              <img
-                src={publicUrls.class_distribution}
-                className="h-auto w-full object-contain border rounded-lg"
-                alt="Distribución por clase"
-              />
-            )}
-          </div>
-        </CardContent>
-      </Card>
+        {distribution && (
+          <Card>
+            <CardHeader className="pb-3">
+              <h3 className="text-sm font-semibold tracking-tight">Histograma por clase</h3>
+              <p className="text-xs text-muted-foreground">Palabras y oraciones por clase — interactivo</p>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <EdaDistribution distribution={distribution} />
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </AnalysisRunner>
   )
 }

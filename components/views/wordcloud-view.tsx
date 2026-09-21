@@ -1,91 +1,105 @@
 'use client'
 
-import { Sparkles } from 'lucide-react'
+import { Cloud } from 'lucide-react'
 import { AnalysisRunner } from '@/components/analysis-runner'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { useEffect, useState } from 'react'
 import { useDataset } from '@/context/dataset-provider'
+import { WordCloudInteractive } from '@/components/charts/wordcloud-interactive'
 
+type WordFreq = {
+  text: string
+  value: number
+  count: number
+  percentage: number
+  doc_frequency: number
+  doc_percentage: number
+  rank: number
+}
+
+type WordCloudResponse = {
+  dataset_id: string
+  documents_processed: number
+  total_words: number
+  unique_words: number
+  frequencies: WordFreq[]
+  max_count: number
+  min_count: number
+}
 
 export function WordCloudView() {
   const [estado, setEstado] = useState<'idle' | 'done' | 'running'>('idle')
-  const [publicUrl, setPublicUrl] = useState<string | null>(null)
+  const [data, setData] = useState<WordCloudResponse | null>(null)
 
   const { datasetSeleccionado } = useDataset()
 
   const ejecutarWordCloud = async () => {
     setEstado('running')
-
     const respuesta = await fetch('http://localhost:8080/wordcloud/visualizeWordCloud', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ dataset: datasetSeleccionado }),
     })
-
     if (!respuesta.ok) {
-      console.error('Error al calcular la nube de palabras:', respuesta.statusText)
+      console.error('Error al generar nube:', respuesta.statusText)
       setEstado('idle')
       return
     }
-
-    const data: { public_url: string } = await respuesta.json()
-    setPublicUrl(data.public_url)
+    const json: WordCloudResponse = await respuesta.json()
+    setData(json)
     setEstado('done')
   }
 
   useEffect(() => {
-    const fetchImage = async () => {
+    if (!datasetSeleccionado) return
+    const fetchData = async () => {
       try {
         setEstado('running')
-
         const respuesta = await fetch('http://localhost:8080/wordcloud/getWordCloudImage', {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ dataset: datasetSeleccionado }),
         })
-
-        if (!respuesta.ok) {
-          setEstado('idle')
-          return
-        }
-
-        const data: { public_url: string } = await respuesta.json()
-
-        if (!data.public_url) {
-          setEstado('idle')
-          return
-        }
-
-        setPublicUrl(data.public_url)
+        if (!respuesta.ok) { setEstado('idle'); return }
+        const json: WordCloudResponse = await respuesta.json()
+        if (!json.frequencies) { setEstado('idle'); return }
+        setData(json)
         setEstado('done')
-      } catch (error) {
-        setEstado('idle')
-        return
-      }
+      } catch { setEstado('idle') }
     }
-
-    fetchImage()
+    fetchData()
   }, [datasetSeleccionado])
-
 
   return (
     <AnalysisRunner
-      icon={Sparkles}
+      icon={Cloud}
       runLabel="Generar nube de palabras"
-      idleHint="Genera la representación vectorial de cada mensaje y proyéctala en 2D para observar agrupamientos semánticos entre los textos."
+      idleHint="Extrae los términos más frecuentes del dataset (sin stopwords, min 3 letras) y visualízalos de forma interactiva."
       estado={estado}
       ejecutarFuncion={ejecutarWordCloud}
     >
       <Card>
-        <CardHeader>
-          <CardTitle>Nube de palabras</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="h-[600px] w-full">
-            {publicUrl && <img src={publicUrl} className="h-full w-full object-contain" alt="Imagen de la nube de palabras" />}
+        <CardHeader className="pb-3">
+          <div className="flex flex-col gap-1">
+            <h3 className="text-sm font-semibold tracking-tight">Nube de palabras</h3>
+            <p className="text-xs text-muted-foreground">
+              {data ? `${data.documents_processed} docs · ${data.total_words.toLocaleString()} palabras · top ${data.frequencies.length}` : 'top 200 términos'}
+            </p>
           </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {!data ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Sin datos</p>
+          ) : (
+            <WordCloudInteractive
+              frequencies={data.frequencies}
+              total_words={data.total_words}
+              unique_words={data.unique_words}
+              max_count={data.max_count}
+            />
+          )}
         </CardContent>
       </Card>
     </AnalysisRunner>
