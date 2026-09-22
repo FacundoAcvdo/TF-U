@@ -2,12 +2,10 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Upload,
   ChartColumn,
-  Settings,
   Sparkles,
   Cloud,
-  HeartCrack,
+  Blocks,
   Layers,
-  ShieldAlert,
   Gauge,
   ChartLine,
   TrendingUp,
@@ -16,7 +14,10 @@ import {
   History,
   FileText,
   Users,
+  BroomSparkles,
+  Bubbles
 } from 'lucide-react'
+
 
 export type ViewId =
   | 'cargar-dataset'
@@ -55,7 +56,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { id: 'cargar-dataset', label: 'Cargar dataset', icon: Upload, href: '/cargar-dataset' },
       { id: 'estadisticas', label: 'Estadísticas generales', icon: ChartColumn, href: '/estadisticas' },
-      { id: 'limpieza-datos', label: 'Limpieza de datos', icon: Settings, href: '/limpieza-datos' },
+      { id: 'limpieza-datos', label: 'Limpieza de datos', icon: BroomSparkles, href: '/limpieza-datos' },
     ],
   },
   {
@@ -63,7 +64,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { id: 'embeddings', label: 'Visualización de embeddings', icon: Sparkles, href: '/embeddings' },
       { id: 'nube-palabras', label: 'Nube de palabras', icon: Cloud, href: '/nube-palabras' },
-      { id: 'emociones-negativas', label: 'Emociones negativas', icon: HeartCrack, href: '/emociones-negativas' },
+      { id: 'emociones-negativas', label: 'Detección de emociones', icon: Bubbles, href: '/emociones-negativas' },
       { id: 'topicos', label: 'Tópicos principales', icon: Layers, href: '/topicos' },
       { id: 'evolucion-palabras', label: 'Evolución de palabras', icon: TrendingUp, href: '/evolucion-palabras' },
       { id: 'sentimientos-tiempo', label: 'Sentimiento en el tiempo', icon: ChartLine, href: '/sentimientos-tiempo' },
@@ -72,7 +73,7 @@ export const navGroups: NavGroup[] = [
   {
     titulo: 'Detección de riesgo',
     items: [
-      { id: 'mencion-suicidio', label: 'Mención de suicidio', icon: ShieldAlert, href: '/mencion-suicidio' },
+      { id: 'mencion-suicidio', label: 'Construir clasificador', icon: Blocks, href: '/mencion-suicidio' },
       { id: 'nivel-riesgo', label: 'Nivel de riesgo', icon: Gauge, href: '/nivel-riesgo' },
     ],
   },
@@ -89,7 +90,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { id: 'informes', label: 'Generar informes', icon: FileText, href: '/informes' },
       { id: 'usuarios', label: 'Gestión de usuarios', icon: Users, href: '/usuarios' },
-      { id: 'gestion-almacenamiento', label: 'Gestión de almacenamiento', icon: Database, href: '/gestion-almacenamiento' },
+      { id: 'gestion-almacenamiento', label: 'Almacenamiento', icon: Database, href: '/gestion-almacenamiento' },
     ],
   },
 ]
