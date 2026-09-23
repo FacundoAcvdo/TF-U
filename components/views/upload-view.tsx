@@ -45,6 +45,8 @@ import type { DatasetPreviewData } from '@/lib/dataset/types'
 import type { AutoConvertSourceFormat } from '@/lib/dataset/autoConvert'
 import { obtenerFormatoOriginal } from '@/lib/dataset/autoConvert'
 import { subirDataset } from '@/lib/dataset/upload'
+import type { WhatsappLocale } from '@/lib/dataset/parsers/txt'
+import { detectWhatsappLocale } from '@/lib/dataset/parsers/txt'
 
 import { DatasetPreview } from '@/components/dataset/DatasetPreview'
 import { useQueryClient } from '@tanstack/react-query'
@@ -145,6 +147,12 @@ export function UploadView() {
     tipo: TipoArchivoEspecial
   } | null>(null)
 
+  const [whatsappLocale, setWhatsappLocale] =
+    useState<WhatsappLocale>('DMY')
+
+  const [archivoOriginalTxt, setArchivoOriginalTxt] =
+    useState<File | null>(null)
+
   function manejarArchivoElegido(file: File) {
     const tipo = tipoArchivoEspecial(file)
 
@@ -169,7 +177,7 @@ export function UploadView() {
     }
   }
 
-  async function seleccionar(file: File) {
+  async function seleccionar(file: File, opts?: { whatsappLocale?: WhatsappLocale }) {
     setArchivo(file)
     setPreview(null)
     setError(null)
@@ -184,11 +192,30 @@ export function UploadView() {
     setSinClasificar(false)
     setEsDeChat(false)
 
+    // detectar locale para txt si no se especificó
+    let localeOpt = opts?.whatsappLocale
+    if (!localeOpt && obtenerFormatoOriginal(file.name) === 'txt') {
+      try {
+        const txt = await file.text()
+        localeOpt = detectWhatsappLocale(txt)
+        setWhatsappLocale(localeOpt)
+        setArchivoOriginalTxt(file)
+      } catch {
+        localeOpt = 'DMY'
+      }
+    }
+    if (obtenerFormatoOriginal(file.name) === 'txt' && localeOpt) {
+      setWhatsappLocale(localeOpt)
+      setArchivoOriginalTxt(file)
+    } else {
+      setArchivoOriginalTxt(null)
+    }
+
     setCargandoPreview(true)
 
     try {
       const result =
-        (await previewDataset(file)) as PosiblePreviewAutoConvertido
+        (await previewDataset(file, localeOpt ? { whatsappLocale: localeOpt } : undefined)) as PosiblePreviewAutoConvertido
 
       if (result.sourceFormat === 'unsupported') {
         setError(
@@ -250,6 +277,40 @@ export function UploadView() {
     }
   }
 
+  async function regenerarPreviewConLocale(nuevoLocale: WhatsappLocale) {
+    if (!archivoOriginalTxt) return
+    setWhatsappLocale(nuevoLocale)
+    setCargandoPreview(true)
+    setError(null)
+    try {
+      const result = (await previewDataset(archivoOriginalTxt, {
+        whatsappLocale: nuevoLocale,
+      })) as PosiblePreviewAutoConvertido
+      if (result.sourceFormat === 'unsupported') {
+        setError(result.notice ?? 'No se pudo reconocer el contenido del archivo.')
+        return
+      }
+      setPreview(result)
+      if (
+        result.sourceFormat === 'whatsapp-chat' ||
+        result.sourceFormat === 'labeled-folders'
+      ) {
+        const columnas = COLUMNAS_FIJAS[result.sourceFormat]
+        setFormatoAutomatico(result.sourceFormat)
+        setArchivoConvertido(result.convertedFile ?? null)
+        setColumnaTexto(columnas.texto)
+        setColumnaClase(columnas.clase ?? '')
+        setSinClasificar(columnas.clase === null)
+        setEsDeChat(columnas.fecha !== null)
+        setColumnaFecha(columnas.fecha ?? '')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo regenerar el preview')
+    } finally {
+      setCargandoPreview(false)
+    }
+  }
+
   function quitarArchivo() {
     setArchivo(null)
     setPreview(null)
@@ -263,6 +324,8 @@ export function UploadView() {
     setFormatoAutomatico(null)
     setArchivoConvertido(null)
     setFormatoOriginal(null)
+    setArchivoOriginalTxt(null)
+    setWhatsappLocale('DMY')
 
     setEstado('idle')
   }
@@ -285,6 +348,7 @@ export function UploadView() {
         columnaFecha: esDeChat ? columnaFecha || null : null,
         formatoOriginal,
         formatoDetectado: formatoAutomatico,
+        formatoFecha: esDeChat && columnaFecha ? whatsappLocale : null,
       }, queryClient)
 
       setEstado('listo')
@@ -491,6 +555,31 @@ export function UploadView() {
             </p>
           )}
 
+          {formatoAutomatico === 'whatsapp-chat' && (
+            <label className="flex flex-col gap-1.5 text-sm font-medium">
+              Formato de fecha en el .txt original
+              <Select
+                value={whatsappLocale}
+                onValueChange={(value) =>
+                  regenerarPreviewConLocale(value as WhatsappLocale)
+                }
+                disabled={!preview || cargandoPreview}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="min-w-[360px]">
+                  <SelectItem value="DMY" className="whitespace-normal">DD/MM/YYYY — ej. 13/08/2026</SelectItem>
+                  <SelectItem value="MDY" className="whitespace-normal">MM/DD/YYYY — ej. 08/13/2026</SelectItem>
+                  <SelectItem value="YMD" className="whitespace-normal">YYYY/MM/DD — ej. 2026/08/13</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-xs font-normal text-muted-foreground">
+                Detectado automáticamente como <strong>{whatsappLocale}</strong>. Si las fechas se ven invertidas (mes 13), cambiá el formato y el preview se regenera.
+              </span>
+            </label>
+          )}
+
           <label className="flex flex-col gap-1.5 text-sm font-medium">
             Columna de texto
 
@@ -618,6 +707,29 @@ export function UploadView() {
               </SelectContent>
             </Select>
           </label>
+
+          {esDeChat && formatoAutomatico !== 'whatsapp-chat' && (
+            <label className="flex flex-col gap-1.5 text-sm font-medium">
+              Formato de fecha
+              <Select
+                value={whatsappLocale}
+                onValueChange={(value) => setWhatsappLocale(value as WhatsappLocale)}
+                disabled={!preview || !esDeChat}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="min-w-[360px]">
+                  <SelectItem value="DMY" className="whitespace-normal">DD/MM/YYYY — ej. 13/08/2026</SelectItem>
+                  <SelectItem value="MDY" className="whitespace-normal">MM/DD/YYYY — ej. 08/13/2026</SelectItem>
+                  <SelectItem value="YMD" className="whitespace-normal">YYYY/MM/DD — ej. 2026/08/13</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-xs font-normal text-muted-foreground">
+                Se normalizará siempre a <strong>YYYY-MM-DD</strong> al guardar. Elegí el formato que tiene tu columna &quot;{columnaFecha || 'fecha'}&quot;.
+              </span>
+            </label>
+          )}
 
           <Button
             onClick={cargar}

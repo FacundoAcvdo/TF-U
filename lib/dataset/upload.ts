@@ -4,6 +4,8 @@ import type {
   DatasetOriginalFormat,
 } from "./autoConvert"
 
+import type { WhatsappLocale } from "./parsers/txt"
+
 export interface SubirDatasetParams {
   archivo: File
   columnaTexto: string
@@ -11,6 +13,7 @@ export interface SubirDatasetParams {
   columnaFecha: string | null
   formatoOriginal: DatasetOriginalFormat
   formatoDetectado: AutoConvertSourceFormat | null
+  formatoFecha?: WhatsappLocale | null
 }
 
 export interface SubirDatasetResultado {
@@ -38,6 +41,10 @@ export async function subirDataset(
 
   if (params.formatoDetectado) {
     formData.append("formatoDetectado", params.formatoDetectado)
+  }
+
+  if (params.formatoFecha) {
+    formData.append("formatoFecha", params.formatoFecha)
   }
 
   const response = await fetch(`http://localhost:8080/dataset/uploadDataset`, {

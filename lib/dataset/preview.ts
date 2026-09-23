@@ -2,10 +2,12 @@ import type { DatasetPreviewData } from './types'
 import { previewCsv } from './parsers/csv'
 import { previewXlsx } from './parsers/xlsx'
 import { previewTxt } from './parsers/txt'
+import type { WhatsappLocale } from './parsers/txt'
 import { previewZip } from './parsers/zip'
 
 export async function previewDataset(
-  file: File
+  file: File,
+  options?: { whatsappLocale?: WhatsappLocale }
 ): Promise<DatasetPreviewData> {
   const extension = file.name
     .split('.')
@@ -20,7 +22,7 @@ export async function previewDataset(
       return previewXlsx(file)
 
     case 'txt':
-      return previewTxt(file)  
+      return previewTxt(file, { locale: options?.whatsappLocale })
 
     case 'zip':
       return previewZip(file)
