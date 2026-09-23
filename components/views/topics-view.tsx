@@ -44,6 +44,11 @@ type TopicModelingTopic = {
   title_source?: 'llm' | 'keywords' | 'disabled'
 }
 
+type TopicReduction = {
+  requested: number
+  achieved: number
+}
+
 function getTopicTitle(topic: TopicModelingTopic) {
   if (topic.title && topic.title.trim().length > 0) {
     return topic.title
@@ -55,6 +60,7 @@ type TopicModelingResult = {
   document_count: number
   topic_count: number
   outlier_percentage: number
+  reduction?: TopicReduction | null
   topics: TopicModelingTopic[]
 }
 
@@ -180,6 +186,14 @@ export function TopicsView() {
     (topic) => topic.topic_id === selectedTopicId
   )
 
+  const reductionNotice = topics
+    ? topics.reduction && topics.reduction.achieved > topics.reduction.requested
+      ? topics.reduction
+      : topics.topics.length > maxTopics
+        ? { requested: maxTopics, achieved: topics.topics.length }
+        : null
+    : null
+
   return (
     <div className="space-y-4">
       <Card>
@@ -226,6 +240,18 @@ export function TopicsView() {
       >
         {topics && (
           <div className="space-y-6">
+
+            {reductionNotice && (
+              <Card className="border-amber-500/40 bg-amber-500/5">
+                <CardContent className="flex items-center gap-3 p-4">
+                  <AlertCircle className="size-5 shrink-0 text-amber-600" />
+                  <p className="text-sm">
+                    No se pudo reducir a los {reductionNotice.requested} tópicos pedidos.
+                    Se muestran {reductionNotice.achieved} tópicos.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
             <div className="grid gap-4 md:grid-cols-3">
 
