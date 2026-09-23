@@ -40,6 +40,15 @@ type TopicModelingTopic = {
   percentage: number
   keywords: string[]
   representative_documents: TopicModelingDocument[]
+  title?: string
+  title_source?: 'llm' | 'keywords' | 'disabled'
+}
+
+function getTopicTitle(topic: TopicModelingTopic) {
+  if (topic.title && topic.title.trim().length > 0) {
+    return topic.title
+  }
+  return topic.keywords.slice(0, 3).join(' · ')
 }
 
 type TopicModelingResult = {
@@ -127,10 +136,45 @@ export function TopicsView() {
   }
 
   useEffect(() => {
-    setTopics(null)
-    setSelectedTopicId(null)
-    setEstado('idle')
-  }, [datasetSeleccionado])
+    if (!datasetSeleccionado) {
+      setTopics(null)
+      setSelectedTopicId(null)
+      setEstado('idle')
+      return
+    }
+    const fetchResults = async () => {
+      try {
+        setEstado('running')
+        setSelectedTopicId(null)
+        const respuesta = await fetch('http://localhost:8080/topicmodeling/getTopicResults', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            dataset: datasetSeleccionado,
+            max_topics: maxTopics,
+          }),
+        })
+        if (!respuesta.ok) {
+          setTopics(null)
+          setEstado('idle')
+          return
+        }
+        const json: TopicModelingResult = await respuesta.json()
+        if (!json.topics) {
+          setTopics(null)
+          setEstado('idle')
+          return
+        }
+        setTopics(json)
+        setEstado('done')
+      } catch {
+        setTopics(null)
+        setEstado('idle')
+      }
+    }
+    fetchResults()
+  }, [datasetSeleccionado, maxTopics])
 
   const selectedTopic = topics?.topics.find(
     (topic) => topic.topic_id === selectedTopicId
@@ -284,10 +328,15 @@ export function TopicsView() {
                     <div className="flex items-start gap-4 pr-8">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-3">
-                          <DialogTitle>Topic {selectedTopic.topic_id + 1}</DialogTitle>
+                          <DialogTitle>{selectedTopic.title ?? `Topic ${selectedTopic.topic_id + 1}`}</DialogTitle>
                           <Badge variant="secondary">
                             {selectedTopic.percentage.toFixed(1)}%
                           </Badge>
+                          {selectedTopic.title_source === 'llm' && (
+                            <Badge variant="outline" className="text-xs">
+                              IA
+                            </Badge>
+                          )}
                         </div>
                         <DialogDescription className="mt-1">
                           {selectedTopic.document_count.toLocaleString()} documentos pertenecen a este tópico.
@@ -381,7 +430,7 @@ function TopicRanking({
           <div className="mb-2 flex items-center justify-between gap-3">
 
             <div className="truncate text-sm font-semibold">
-              {topic.keywords.slice(0, 3).join(' · ')}
+              {getTopicTitle(topic)}
             </div>
 
             <Badge
