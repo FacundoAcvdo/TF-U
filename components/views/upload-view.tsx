@@ -349,6 +349,7 @@ export function UploadView() {
         formatoOriginal,
         formatoDetectado: formatoAutomatico,
         formatoFecha: esDeChat && columnaFecha ? whatsappLocale : null,
+        esChat: esDeChat,
       }, queryClient)
 
       setEstado('listo')

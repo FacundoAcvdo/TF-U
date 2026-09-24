@@ -14,6 +14,7 @@ export interface SubirDatasetParams {
   formatoOriginal: DatasetOriginalFormat
   formatoDetectado: AutoConvertSourceFormat | null
   formatoFecha?: WhatsappLocale | null
+  esChat: boolean
 }
 
 export interface SubirDatasetResultado {
@@ -29,6 +30,7 @@ export async function subirDataset(
   formData.append("archivo", params.archivo, params.archivo.name)
   formData.append("columnaTexto", params.columnaTexto)
   formData.append("formatoOriginal", params.formatoOriginal)
+  formData.append("esChat", String(params.esChat))
   formData.append("user_id", "usuario123")
 
   if (params.columnaClase) {
