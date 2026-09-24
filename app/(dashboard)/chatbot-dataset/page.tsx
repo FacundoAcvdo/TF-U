@@ -1,5 +1,5 @@
-import { ChatbotView } from '@/components/views/chatbot-view'
+import { DatasetChatbotView } from '@/components/views/dataset-chatbot-view'
 
 export default function Page() {
-  return <ChatbotView/>
+  return <DatasetChatbotView/>
 }
