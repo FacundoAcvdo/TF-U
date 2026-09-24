@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ShieldAlert, Download, FileCode2, Settings2, Database, TriangleAlert } from 'lucide-react'
+import { ShieldAlert, Download, FileCode2, Settings2, Database, TriangleAlert, Info } from 'lucide-react'
 import { AnalysisRunner } from '@/components/analysis-runner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -16,26 +16,31 @@ import {
 } from '@/components/ui/select'
 import { useDataset } from '@/context/dataset-provider'
 
-const opciones = [
-  'Validación Cruzada',
-  'Entrenamiento y Prueba',
-]
+const VALIDACION_CRUZADA = 'Validación Cruzada'
+const ENTRENAMIENTO_PRUEBA = 'Entrenamiento y Prueba'
 
-const tamañoK = [
-  '5',
-  '10',
-]
+const opciones = [VALIDACION_CRUZADA, ENTRENAMIENTO_PRUEBA]
+
+const tamañoK = ['5', '10']
 
 const modelos = [
   'Logistic Regression',
   'Support Vector Machine',
   'Random Forest',
-]
+  'Naive Bayes',
+  'BERT',
+] as const
+
+type Modelo = (typeof modelos)[number]
+
+const MODELOS_SIN_VALIDACION_CRUZADA: Modelo[] = ['BERT']
 
 function formatearPorcentaje(valor: number): string {
   const truncado = Math.trunc(valor * 100 * 100) / 100
   return `${truncado.toFixed(2)}%`
 }
+
+const CLASIFICACION_BASE = 'http://localhost:8080/classification'
 
 type ResumenMenciones = {
   truePositive: number
@@ -49,23 +54,37 @@ type ResumenMenciones = {
   total_muestras: number
   muestras_train: number
   muestras_test: number
+  matriz_confusion: number[][]
+  clases: string[]
 }
 
 export function MentionView() {
   const [estado, setEstado] = useState<'idle' | 'done' | 'running'>('idle')
-  const [modeloSeleccionado, setModeloSeleccionado] = useState<string>(modelos[0])
-  const [metodoDeEntrenamiento, setMetodoDeEntrenamiento] = useState<string | null>(opciones[0])
-  const [valorK, setValorK] = useState<string | null>(tamañoK[0])
+  const [modeloSeleccionado, setModeloSeleccionado] = useState<Modelo>(modelos[0])
+  const [metodoDeEntrenamiento, setMetodoDeEntrenamiento] = useState<string>(opciones[0])
+  const [valorK, setValorK] = useState<string>(tamañoK[0])
   const [porcentajeTrain, setPorcentajeTrain] = useState<number[]>([50])
   const [resultado, setResultado] = useState<ResumenMenciones | null>(null)
   const [modeloDescargaUrl, setModeloDescargaUrl] = useState<string | null>(null)
-  const [nombreArchivo, setNombreArchivo] = useState<string>('modelo.pt')
+  const [nombreArchivo, setNombreArchivo] = useState<string>('modelo.zip')
   const [errorMensaje, setErrorMensaje] = useState<string | null>(null)
 
   const { datasetSeleccionado } = useDataset()
 
   const porcentajeEntrenamiento = porcentajeTrain[0] ?? 50
   const porcentajePrueba = 100 - porcentajeEntrenamiento
+
+  const soportaValidacionCruzada = !MODELOS_SIN_VALIDACION_CRUZADA.includes(modeloSeleccionado)
+  const esBert = modeloSeleccionado === 'BERT'
+
+  const handleModeloChange = (val: string) => {
+    const nuevoModelo = (val as Modelo) ?? modelos[0]
+    setModeloSeleccionado(nuevoModelo)
+
+    if (MODELOS_SIN_VALIDACION_CRUZADA.includes(nuevoModelo) && metodoDeEntrenamiento === VALIDACION_CRUZADA) {
+      setMetodoDeEntrenamiento(ENTRENAMIENTO_PRUEBA)
+    }
+  }
 
   const handleReset = () => {
     setResultado(null)
@@ -75,14 +94,21 @@ export function MentionView() {
   }
 
   const ejecutarDeteccion = async () => {
+    if (!datasetSeleccionado) {
+      setErrorMensaje('Seleccioná un dataset antes de entrenar.')
+      return
+    }
+
     setEstado('running')
     setErrorMensaje(null)
+
+    const usaValidacionCruzada = soportaValidacionCruzada && metodoDeEntrenamiento === VALIDACION_CRUZADA
 
     const body = {
       dataset: datasetSeleccionado,
       modelo: modeloSeleccionado,
-      modo: metodoDeEntrenamiento === 'Validación Cruzada' ? 'validacion_cruzada' : 'porcentajes',
-      ...(metodoDeEntrenamiento === 'Validación Cruzada'
+      modo: usaValidacionCruzada ? 'validacion_cruzada' : 'porcentajes',
+      ...(usaValidacionCruzada
         ? { k: Number(valorK) }
         : {
             porcentaje_entrenamiento: porcentajeEntrenamiento,
@@ -91,7 +117,7 @@ export function MentionView() {
     }
 
     try {
-      const res = await fetch('http://localhost:8080/classification/detectar_menciones', {
+      const res = await fetch(`${CLASIFICACION_BASE}/detectar_menciones`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -102,15 +128,20 @@ export function MentionView() {
         const errorData = await res.json().catch(() => null)
         const mensaje = errorData?.detail ?? 'Ocurrió un error al detectar menciones. Por favor, inténtelo de nuevo.'
         console.warn('Error al detectar menciones:', mensaje)
-        setErrorMensaje(mensaje)
+        setErrorMensaje(typeof mensaje === 'string' ? mensaje : JSON.stringify(mensaje))
         setEstado('idle')
         return
       }
 
       const data = await res.json()
+
+      // El modelo queda guardado en el servidor y se descarga por link
+      // (antes viajaba en base64 dentro del JSON y tumbaba la conexión con BERT).
       setResultado(data.resumen)
-      setModeloDescargaUrl(`data:application/octet-stream;base64,${data.archivo_base64}`)
-      setNombreArchivo(data.nombre_archivo)
+      setModeloDescargaUrl(
+        `${CLASIFICACION_BASE}/descargar_modelo?model_id=${encodeURIComponent(data.model_id ?? '')}`,
+      )
+      setNombreArchivo(data.nombre_archivo ?? 'modelo.zip')
       setEstado('done')
     } catch (error) {
       console.warn('Error de conexión al detectar menciones:', error)
@@ -160,7 +191,7 @@ export function MentionView() {
             )}
           </CardHeader>
 
-          <CardContent>
+          <CardContent className="flex flex-col gap-4">
             <div className={resultado ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4' : 'flex flex-col gap-4'}>
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium text-foreground">
@@ -168,7 +199,7 @@ export function MentionView() {
                 </label>
                 <Select
                   value={modeloSeleccionado}
-                  onValueChange={(val) => setModeloSeleccionado(val ?? modelos[0])}
+                  onValueChange={handleModeloChange}
                   disabled={Boolean(resultado)}
                 >
                   <SelectTrigger className="w-full">
@@ -191,7 +222,7 @@ export function MentionView() {
                   Método de entrenamiento
                 </label>
                 <Select
-                  value={metodoDeEntrenamiento ?? undefined}
+                  value={metodoDeEntrenamiento}
                   onValueChange={setMetodoDeEntrenamiento}
                   disabled={Boolean(resultado)}
                 >
@@ -201,7 +232,11 @@ export function MentionView() {
                   <SelectContent>
                     <SelectGroup>
                       {opciones.map((item) => (
-                        <SelectItem key={item} value={item}>
+                        <SelectItem
+                          key={item}
+                          value={item}
+                          disabled={item === VALIDACION_CRUZADA && !soportaValidacionCruzada}
+                        >
                           {item}
                         </SelectItem>
                       ))}
@@ -210,7 +245,7 @@ export function MentionView() {
                 </Select>
               </div>
 
-              {metodoDeEntrenamiento === 'Entrenamiento y Prueba' && (
+              {metodoDeEntrenamiento === ENTRENAMIENTO_PRUEBA && (
                 <div className="flex flex-col gap-2">
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>Entrenamiento: {porcentajeEntrenamiento}%</span>
@@ -219,7 +254,7 @@ export function MentionView() {
                   <Slider
                     min={10}
                     max={90}
-                    step={10}
+                    step={5}
                     disabled={Boolean(resultado)}
                     value={porcentajeTrain}
                     onValueChange={(val) =>
@@ -230,13 +265,13 @@ export function MentionView() {
                 </div>
               )}
 
-              {metodoDeEntrenamiento === 'Validación Cruzada' && (
+              {metodoDeEntrenamiento === VALIDACION_CRUZADA && soportaValidacionCruzada && (
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-medium text-foreground">
                     Cantidad de pliegues (K)
                   </label>
                   <Select
-                    value={valorK ?? undefined}
+                    value={valorK}
                     onValueChange={setValorK}
                     disabled={Boolean(resultado)}
                   >
@@ -256,6 +291,17 @@ export function MentionView() {
                 </div>
               )}
             </div>
+
+            {esBert && !resultado && (
+              <div className="flex items-start gap-2.5 rounded-lg border bg-muted/30 px-3.5 py-2.5 text-xs text-muted-foreground">
+                <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                <span>
+                  BERT reentrena la red completa sobre los textos del dataset. Solo admite
+                  división en entrenamiento y prueba, puede tardar varios minutos y el archivo
+                  resultante pesa cientos de megabytes.
+                </span>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -310,37 +356,51 @@ export function MentionView() {
                 </div>
               </div>
 
-              <div className="w-full max-w-lg mx-auto grid grid-cols-[1fr_1.3fr_1.3fr_1fr] gap-3 text-center items-center">
-                <div />
-                <div className="text-xs font-medium text-muted-foreground pb-1">
-                  Predicción: Mención
+              {/* MATRIZ DE CONFUSIÓN DINÁMICA (Soporta múltiples clases) */}
+              <div className="w-full flex flex-col items-center gap-2">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Matriz de Confusión (Filas: Real, Columnas: Predicha)
+                </span>
+                <div className="overflow-x-auto max-w-full border rounded-lg p-2 bg-muted/10">
+                  <table className="text-xs text-center border-collapse">
+                    <thead>
+                      <tr>
+                        <th className="p-2 border-b border-r bg-muted/20 text-muted-foreground font-semibold">Real \ Pred</th>
+                        {resultado.clases.map((c, idx) => (
+                          <th key={idx} className="p-2 border-b border-r bg-muted/20 font-medium text-foreground max-w-[100px] truncate px-3" title={c}>
+                            {c}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {resultado.matriz_confusion.map((fila, i) => (
+                        <tr key={i}>
+                          <th className="p-2 border-r border-b bg-muted/20 font-medium text-foreground text-left max-w-[100px] truncate px-3" title={resultado.clases[i]}>
+                            {resultado.clases[i]}
+                          </th>
+                          {fila.map((valor, j) => {
+                            const esDiagonal = i === j
+                            return (
+                              <td
+                                key={j}
+                                className={`p-2 border-r border-b font-mono ${
+                                  esDiagonal
+                                    ? 'bg-primary/15 text-primary font-bold'
+                                    : valor > 0
+                                    ? 'bg-destructive/10 text-destructive font-medium'
+                                    : 'text-muted-foreground'
+                                }`}
+                              >
+                                {valor}
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="text-xs font-medium text-muted-foreground pb-1">
-                  Predicción: No mención
-                </div>
-                <div />
-
-                <div className="text-right pr-3 text-xs font-medium text-muted-foreground">
-                  Real: Mención
-                </div>
-                <div className="rounded-lg border border-border/80 bg-muted/50 py-3.5 px-2 text-base font-bold text-foreground shadow-2xs">
-                  {resultado.truePositive.toLocaleString()}
-                </div>
-                <div className="rounded-lg border border-border/80 bg-muted/50 py-3.5 px-2 text-base font-bold text-foreground shadow-2xs">
-                  {resultado.falseNegative.toLocaleString()}
-                </div>
-                <div />
-
-                <div className="text-right pr-3 text-xs font-medium text-muted-foreground">
-                  Real: No mención
-                </div>
-                <div className="rounded-lg border border-border/80 bg-muted/50 py-3.5 px-2 text-base font-bold text-foreground shadow-2xs">
-                  {resultado.falsePositive.toLocaleString()}
-                </div>
-                <div className="rounded-lg border border-border/80 bg-muted/50 py-3.5 px-2 text-base font-bold text-foreground shadow-2xs">
-                  {resultado.trueNegative.toLocaleString()}
-                </div>
-                <div />
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full max-w-xl">
