@@ -41,7 +41,18 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
   })
 
   useEffect(() => {
-    if (datasets && datasets.length > 0 && !datasetSeleccionado) {
+    if (!datasets) {
+      return;
+    }
+    if (datasets.length === 0) {
+      if (datasetSeleccionado !== null) {
+        setDatasetSeleccionado(null);
+      }
+      return;
+    }
+    const sigueExistiendo = datasetSeleccionado !== null
+      && datasets.some((dataset) => dataset.dataset_name === datasetSeleccionado);
+    if (!sigueExistiendo) {
       setDatasetSeleccionado(datasets[0].dataset_name);
     }
   }, [datasets, datasetSeleccionado])
