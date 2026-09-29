@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Activity, LogOut } from 'lucide-react'
 import { navGroups } from '@/lib/navigation'
@@ -13,6 +14,21 @@ export function AppSidebar({
 }) {
   const pathname = usePathname()
   const router = useRouter()
+  const [esAdmin, setEsAdmin] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setEsAdmin(data?.user?.role === 'admin'))
+      .catch(() => setEsAdmin(false))
+  }, [])
+
+  const grupos = navGroups
+    .map((g) => ({
+      ...g,
+      items: esAdmin ? g.items : g.items.filter((i) => i.id !== 'usuarios'),
+    }))
+    .filter((g) => g.items.length > 0)
 
   async function handleLogout() {
     try {
@@ -34,7 +50,7 @@ export function AppSidebar({
       </div>
 
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-4">
-        {navGroups.map((grupo) => (
+        {grupos.map((grupo) => (
           <div key={grupo.titulo} className="flex flex-col gap-1">
             <p className="px-2 pb-1 text-[0.68rem] font-semibold uppercase tracking-wider text-sidebar-foreground/45">
               {grupo.titulo}
