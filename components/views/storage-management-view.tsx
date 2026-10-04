@@ -20,6 +20,7 @@ import {
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { useDatasetsQuery } from '@/context/dataset-provider'
+import { API_BASE } from '@/lib/api-base'
 import { useQueryClient } from '@tanstack/react-query'
 
 
@@ -94,7 +95,7 @@ function StorageManagementView() {
             setEliminandoDataset(datasetId)
 
             const respuesta = await fetch(
-                        `http://localhost:8080/dataset/deleteDataset?dataset_id=${encodeURIComponent(datasetId)}`,
+                        `${API_BASE}/dataset/deleteDataset?dataset_id=${encodeURIComponent(datasetId)}`,
                         {
                             method: 'DELETE',
                             credentials: 'include',
@@ -135,7 +136,7 @@ function StorageManagementView() {
             setEliminandoTodos(true)
 
             const respuesta = await fetch(
-            'http://localhost:8080/dataset/deleteDatasetsByUser',
+            API_BASE + '/dataset/deleteDatasetsByUser',
             {
                 method: 'DELETE',
                 credentials: 'include',

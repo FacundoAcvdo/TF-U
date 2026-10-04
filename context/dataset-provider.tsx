@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { API_BASE } from "@/lib/api-base";
 
 interface DatasetInfo {
     dataset_id: string
@@ -20,7 +21,7 @@ interface DatasetContextType {
 const DatasetContext = createContext<DatasetContextType | undefined>(undefined);
 
 const fetchDatasets = async (): Promise<DatasetInfo[]> => {
-  const response = await fetch('http://localhost:8080/dataset/getDatasets', {
+  const response = await fetch(API_BASE + '/dataset/getDatasets', {
     method: 'GET',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' }

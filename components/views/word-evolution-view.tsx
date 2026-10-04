@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 
 import { AnalysisRunner } from '@/components/analysis-runner'
+import { API_BASE } from '@/lib/api-base'
 import {
   Card,
   CardContent,
@@ -98,7 +99,7 @@ export function WordEvolutionView() {
     const cargarUsuarios = async () => {
       try {
         const res = await fetch(
-          'http://localhost:8080/evolution/users',
+          API_BASE + '/evolution/users',
           {
             method: 'POST',
             credentials: 'include',
@@ -161,7 +162,7 @@ export function WordEvolutionView() {
 
     try {
       const res = await fetch(
-        'http://localhost:8080/evolution/word-evolution',
+        API_BASE + '/evolution/word-evolution',
         {
           method: 'POST',
           credentials: 'include',

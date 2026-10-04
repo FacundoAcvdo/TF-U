@@ -5,6 +5,7 @@ import { AnalysisRunner } from '@/components/analysis-runner'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { useEffect, useState } from 'react'
 import { useDataset } from '@/context/dataset-provider'
+import { API_BASE } from '@/lib/api-base'
 import { EmbeddingsScatter } from '@/components/charts/embeddings-scatter'
 
 type EmbeddingsResponse = {
@@ -25,7 +26,7 @@ export function EmbeddingsView() {
 
   const ejecutarEmbeddings = async () => {
     setEstado('running')
-    const respuesta = await fetch('http://localhost:8080/clustering/visualizeEmbeddings', {
+    const respuesta = await fetch(API_BASE + '/clustering/visualizeEmbeddings', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -46,7 +47,7 @@ export function EmbeddingsView() {
     const fetchData = async () => {
       try {
         setEstado('running')
-        const respuesta = await fetch('http://localhost:8080/clustering/getEmbeddingsImage', {
+        const respuesta = await fetch(API_BASE + '/clustering/getEmbeddingsImage', {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },

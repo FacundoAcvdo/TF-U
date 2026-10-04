@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { useDataset } from "../../context/dataset-provider";
+import { API_BASE } from "@/lib/api-base";
 
 import { CleaningConfig } from "../../lib/data-cleaning/cleaning-config";
 import { CleaningResult } from "../../lib/data-cleaning/cleaning-results";
@@ -76,7 +77,7 @@ export function CleaningView() {
 
     try {
       const response = await fetch(
-        "http://localhost:8080/datacleaning/cleanDataset",
+        API_BASE + "/datacleaning/cleanDataset",
         {
           method: "POST",
           credentials: "include",
@@ -148,7 +149,7 @@ export function CleaningView() {
     if (!result?.download_id) return;
 
     const response = await fetch(
-      "http://localhost:8080/datacleaning/download",
+      API_BASE + "/datacleaning/download",
       {
         method: "POST",
         credentials: "include",

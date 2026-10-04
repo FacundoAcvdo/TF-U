@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { API_BASE as API_ROOT } from '@/lib/api-base'
 
 type Mensaje = { autor: 'usuario' | 'asistente'; mensaje: string; created_at: string }
 
-const API_BASE = 'http://localhost:8080/rag'
+const API_BASE = API_ROOT + '/rag'
 
 function formatFechaHora(iso: string | undefined): string {
   if (!iso) return ''

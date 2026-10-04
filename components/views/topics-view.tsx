@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { API_BASE } from '@/lib/api-base'
 import {
   Select,
   SelectContent,
@@ -120,7 +121,7 @@ export function TopicsView() {
   const ejecutarTopicModeling = async () => {
     setEstado('running')
 
-    const respuesta = await fetch('http://localhost:8080/topicmodeling/getTopics', {
+    const respuesta = await fetch(API_BASE + '/topicmodeling/getTopics', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -152,7 +153,7 @@ export function TopicsView() {
       try {
         setEstado('running')
         setSelectedTopicId(null)
-        const respuesta = await fetch('http://localhost:8080/topicmodeling/getTopicResults', {
+        const respuesta = await fetch(API_BASE + '/topicmodeling/getTopicResults', {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },

@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useDataset } from '@/context/dataset-provider'
+import { API_BASE as API_ROOT } from '@/lib/api-base'
 
 const VALIDACION_CRUZADA = 'Validación Cruzada'
 const ENTRENAMIENTO_PRUEBA = 'Entrenamiento y Prueba'
@@ -40,7 +41,7 @@ function formatearPorcentaje(valor: number): string {
   return `${truncado.toFixed(2)}%`
 }
 
-const CLASIFICACION_BASE = 'http://localhost:8080/classification'
+const CLASIFICACION_BASE = API_ROOT + '/classification'
 
 type ResumenMenciones = {
   truePositive: number

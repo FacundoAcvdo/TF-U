@@ -3,6 +3,7 @@ import { ChartColumn } from 'lucide-react'
 import { AnalysisRunner } from '@/components/analysis-runner'
 import { useEffect, useState } from 'react'
 import { useDataset } from '@/context/dataset-provider'
+import { API_BASE } from '@/lib/api-base'
 
 import {
   Table,
@@ -55,7 +56,7 @@ export function StatsView() {
 
   const ejecutarEda = async () => {
     setEstado('running')
-    const respuesta = await fetch('http://localhost:8080/eda/eda', {
+    const respuesta = await fetch(API_BASE + '/eda/eda', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -80,7 +81,7 @@ export function StatsView() {
       const fetchResults = async () => {
         try {
           setEstado('running')
-          const respuesta = await fetch('http://localhost:8080/eda/getResults', {
+          const respuesta = await fetch(API_BASE + '/eda/getResults', {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },

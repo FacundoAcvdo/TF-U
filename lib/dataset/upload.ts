@@ -5,6 +5,7 @@ import type {
 } from "./autoConvert"
 
 import type { WhatsappLocale } from "./parsers/txt"
+import { API_BASE } from "@/lib/api-base"
 
 export interface SubirDatasetParams {
   archivo: File
@@ -49,7 +50,7 @@ export async function subirDataset(
     formData.append("formatoFecha", params.formatoFecha)
   }
 
-  const response = await fetch(`http://localhost:8080/dataset/uploadDataset`, {
+  const response = await fetch(`${API_BASE}/dataset/uploadDataset`, {
     method: "POST",
     credentials: 'include',
     body: formData,

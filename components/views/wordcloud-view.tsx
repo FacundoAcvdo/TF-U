@@ -5,6 +5,7 @@ import { AnalysisRunner } from '@/components/analysis-runner'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { useEffect, useState } from 'react'
 import { useDataset } from '@/context/dataset-provider'
+import { API_BASE } from '@/lib/api-base'
 import { WordCloudInteractive } from '@/components/charts/wordcloud-interactive'
 
 type WordFreq = {
@@ -35,7 +36,7 @@ export function WordCloudView() {
 
   const ejecutarWordCloud = async () => {
     setEstado('running')
-    const respuesta = await fetch('http://localhost:8080/wordcloud/visualizeWordCloud', {
+    const respuesta = await fetch(API_BASE + '/wordcloud/visualizeWordCloud', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -56,7 +57,7 @@ export function WordCloudView() {
     const fetchData = async () => {
       try {
         setEstado('running')
-        const respuesta = await fetch('http://localhost:8080/wordcloud/getWordCloudImage', {
+        const respuesta = await fetch(API_BASE + '/wordcloud/getWordCloudImage', {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },

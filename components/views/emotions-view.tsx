@@ -15,6 +15,7 @@ import { AnalysisRunner } from '@/components/analysis-runner'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { useEffect, useState } from 'react'
 import { useDataset } from '@/context/dataset-provider'
+import { API_BASE } from '@/lib/api-base'
 import { EmotionCorpusMeanChart } from '@/components/charts/emotion-corpus-mean-chart'
 import { EmotionDistributionChart } from '@/components/charts/emotion-distribution-chart'
 import { EmotionCorrelationHeatmap } from '@/components/charts/emotion-correlation-heatmap'
@@ -59,7 +60,7 @@ export function EmotionsView() {
 
   const ejecutarEmotions = async () => {
     setEstado('running')
-    const respuesta = await fetch('http://localhost:8080/emotions/analyzeEmotions', {
+    const respuesta = await fetch(API_BASE + '/emotions/analyzeEmotions', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -80,7 +81,7 @@ export function EmotionsView() {
     const fetchResults = async () => {
       try {
         setEstado('running')
-        const respuesta = await fetch('http://localhost:8080/emotions/getResults', {
+        const respuesta = await fetch(API_BASE + '/emotions/getResults', {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
