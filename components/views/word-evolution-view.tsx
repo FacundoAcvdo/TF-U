@@ -45,10 +45,15 @@ type Periodo = {
   palabras_top: PalabraTop[]
 }
 
+type Bloque = {
+  cantidad_mensajes: number
+  palabras_top: PalabraTop[]
+}
+
 type EvolucionPalabras = {
   remitente: string
   granularidad: string
-  rango_fechas: {
+  rango_fechas?: {
     desde: string
     hasta: string
   }
@@ -189,7 +194,19 @@ export function WordEvolutionView() {
       }
 
       const data = await res.json()
-      setResultado(data)
+      if (Array.isArray((data as { bloques?: unknown }).bloques)) {
+        const raw = data as { bloques: Bloque[] }
+        const periodos: Periodo[] = raw.bloques.map((b, i) => ({
+          etiqueta: `Partición ${i + 1}`,
+          fecha_inicio: '',
+          fecha_fin: '',
+          cantidad_mensajes: b.cantidad_mensajes,
+          palabras_top: b.palabras_top,
+        }))
+        setResultado({ ...data, periodos, rango_fechas: undefined })
+      } else {
+        setResultado(data)
+      }
       setEstado('done')
     } catch (error) {
       console.warn('Error de conexión al calcular evolución:', error)
@@ -399,14 +416,21 @@ export function WordEvolutionView() {
                     <span><strong className="font-medium text-foreground">{resultado.total_mensajes.toLocaleString()}</strong> mensajes</span>
                   </div>
                   
-                  <div className="flex items-center gap-1.5 bg-background border px-2.5 py-1 rounded-md shadow-sm text-xs text-muted-foreground">
-                    <Calendar className="h-3.5 w-3.5 text-primary shrink-0" />
-                    <span>
-                      <strong className="font-medium text-foreground">{formatearFecha(resultado.rango_fechas.desde)}</strong> 
-                      <span className="mx-1.5 opacity-50">—</span> 
-                      <strong className="font-medium text-foreground">{formatearFecha(resultado.rango_fechas.hasta)}</strong>
-                    </span>
-                  </div>
+                  {resultado.rango_fechas ? (
+                    <div className="flex items-center gap-1.5 bg-background border px-2.5 py-1 rounded-md shadow-sm text-xs text-muted-foreground">
+                      <Calendar className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span>
+                        <strong className="font-medium text-foreground">{formatearFecha(resultado.rango_fechas.desde)}</strong>
+                        <span className="mx-1.5 opacity-50">—</span>
+                        <strong className="font-medium text-foreground">{formatearFecha(resultado.rango_fechas.hasta)}</strong>
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 bg-background border px-2.5 py-1 rounded-md shadow-sm text-xs text-muted-foreground">
+                      <Calendar className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span>Sin fechas: partición por bloques</span>
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-1.5 bg-background border px-2.5 py-1 rounded-md shadow-sm text-xs text-muted-foreground">
                     <Layers className="h-3.5 w-3.5 text-primary shrink-0" />
@@ -431,7 +455,7 @@ export function WordEvolutionView() {
             <div className="relative">
               <div className="mb-2 flex items-center justify-between px-1">
                 <span className="text-xs font-medium text-muted-foreground">
-                  Línea de tiempo horizontal
+                  {resultado.rango_fechas ? 'Línea de tiempo horizontal' : 'Particiones por bloques'}
                 </span>
 
                 {resultado.periodos.length > 1 && (
@@ -488,10 +512,12 @@ export function WordEvolutionView() {
                                     {periodo.etiqueta}
                                   </p>
 
-                                  <p className="mt-0.5 text-[11px] text-muted-foreground truncate">
-                                    {formatearFecha(periodo.fecha_inicio)} —{' '}
-                                    {formatearFecha(periodo.fecha_fin)}
-                                  </p>
+                                  {periodo.fecha_inicio ? (
+                                    <p className="mt-0.5 text-[11px] text-muted-foreground truncate">
+                                      {formatearFecha(periodo.fecha_inicio)} —{' '}
+                                      {formatearFecha(periodo.fecha_fin)}
+                                    </p>
+                                  ) : null}
                                 </div>
 
                                 <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-md">

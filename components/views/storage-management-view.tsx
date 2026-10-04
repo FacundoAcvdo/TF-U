@@ -88,7 +88,7 @@ function StorageManagementView() {
     const [eliminandoDataset, setEliminandoDataset] = useState<string | null>(null)
     const [eliminandoTodos, setEliminandoTodos] = useState(false)
     
-    const totalStorage = 5 * 1024 * 1024 * 1024
+    const totalStorage = 500 * 1024 * 1024
 
     const eliminarDataset = async (datasetId: string) => {
         try {
@@ -273,7 +273,7 @@ function StorageManagementView() {
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
 
             <StorageStat
-              label="Archivos"
+              label="Documentos"
               value={formatBytes(totalFilesSize || 0)}
             />
 
@@ -483,7 +483,7 @@ function StorageManagementView() {
 
                               <div>
                                 <p className="text-sm font-medium">
-                                  Archivo
+                                  Documentos
                                 </p>
 
                                 <p className="text-xs text-muted-foreground">
