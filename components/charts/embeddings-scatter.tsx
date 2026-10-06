@@ -11,19 +11,34 @@ type Props = {
   outliers: number
   total: number
   truncated?: boolean
+  fondoBlanco?: boolean
 }
 
-const CHART_VARS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)']
+const CLARO: Record<string, string> = {
+  '--card': '#ffffff',
+  '--border': '#e5e7eb',
+  '--chart-1': '#2563eb',
+  '--chart-2': '#0d9488',
+  '--chart-3': '#d97706',
+  '--chart-4': '#dc2626',
+  '--chart-5': '#475569',
+  '--muted-foreground': '#6b7280',
+}
 
-function getClusterVar(cluster: string, indexMap: Map<string, number>) {
-  if (cluster === '-1') return 'var(--muted-foreground)'
+const CHART_COLORS = ['#2563eb', '#0d9488', '#d97706', '#dc2626', '#9333ea']
+const OUTLIER_COLOR = '#9ca3af'
+
+function getClusterColor(cluster: string, indexMap: Map<string, number>) {
+  if (cluster === '-1') return OUTLIER_COLOR
   const idx = indexMap.get(cluster) ?? 0
-  return CHART_VARS[idx % CHART_VARS.length]
+  return CHART_COLORS[idx % CHART_COLORS.length]
 }
 
-function resolveCssVar(varExpr: string) {
+function resolveCssVar(varExpr: string, claro: Record<string, string> | null = null) {
+  const clave = (varExpr.match(/var\((--[^)]+)\)/) || [])[1] || varExpr
+  if (claro && claro[clave]) return claro[clave]
   if (typeof window === 'undefined') return varExpr
-  // varExpr like "var(--chart-1)" -> extract --chart-1
+  // varExpr like "var(--card)" -> extract --card
   const m = varExpr.match(/var\((--[^)]+)\)/)
   if (m) {
     const v = getComputedStyle(document.documentElement).getPropertyValue(m[1]).trim()
@@ -32,7 +47,7 @@ function resolveCssVar(varExpr: string) {
   return varExpr
 }
 
-export function EmbeddingsScatter({ points, clusters, outliers, total, truncated }: Props) {
+export function EmbeddingsScatter({ points, clusters, outliers, total, truncated, fondoBlanco = false }: Props) {
   const [activeCluster, setActiveCluster] = useState<string | null>(null)
   const [showOutliers, setShowOutliers] = useState(true)
   const [hover, setHover] = useState<{ p: Point; cx: number; cy: number } | null>(null)
@@ -89,8 +104,9 @@ export function EmbeddingsScatter({ points, clusters, outliers, total, truncated
 
     // fondo
     ctx.clearRect(0, 0, width, height)
-    const cardFill = resolveCssVar('var(--card)')
-    const borderCol = resolveCssVar('var(--border)')
+    const paleta = fondoBlanco ? CLARO : null
+    const cardFill = resolveCssVar('var(--card)', paleta)
+    const borderCol = resolveCssVar('var(--border)', paleta)
     ctx.fillStyle = cardFill || '#ffffff'
     ctx.strokeStyle = borderCol || '#e5e7eb'
     ctx.lineWidth = 1
@@ -108,14 +124,14 @@ export function EmbeddingsScatter({ points, clusters, outliers, total, truncated
     }
     ctx.globalAlpha = 1
 
-    const cardStroke = resolveCssVar('var(--card)')
+    const cardStroke = resolveCssVar('var(--card)', paleta)
 
     for (const p of filtered) {
       const isOutlier = p.cluster === '-1'
       const cx = scaleX(p.x)
       const cy = scaleY(p.y)
       const r = isOutlier ? 2 : 3.2
-      const col = resolveCssVar(getClusterVar(p.cluster, clusterIndex))
+      const col = resolveCssVar(getClusterColor(p.cluster, clusterIndex), paleta)
       const alpha = isOutlier ? 0.22 : 0.78
 
       ctx.beginPath()
@@ -129,7 +145,7 @@ export function EmbeddingsScatter({ points, clusters, outliers, total, truncated
       ctx.stroke()
     }
     ctx.globalAlpha = 1
-  }, [filtered, bounds, clusterIndex])
+  }, [filtered, bounds, clusterIndex, fondoBlanco])
 
   const handleMouseMove = (e: React.MouseEvent) => {
     const canvas = canvasRef.current
@@ -181,7 +197,7 @@ export function EmbeddingsScatter({ points, clusters, outliers, total, truncated
                 onClick={() => setActiveCluster(isActive ? null : c.id)}
                 className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${isActive ? 'bg-foreground text-background border-foreground' : 'bg-card hover:bg-muted'}`}
               >
-                <span className="inline-block size-2 rounded-full" style={{ background: getClusterVar(c.id, clusterIndex) }} />
+                <span className="inline-block size-2 rounded-full" style={{ background: getClusterColor(c.id, clusterIndex) }} />
                 <span className={isActive ? 'text-background' : 'text-foreground'}>c{c.id}</span>
                 <span className={isActive ? 'text-background/70' : 'text-muted-foreground'}>{c.count}</span>
               </button>
