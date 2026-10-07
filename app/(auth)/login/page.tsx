@@ -6,8 +6,8 @@ import { Activity, Lock, Mail, LoaderCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 function LoginInner() {
-  const [email, setEmail] = useState('facevedo@unsl.edu.ar')
-  const [password, setPassword] = useState('abc123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()

@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const GATEWAY_URL = process.env.GATEWAY_URL || process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://api-gateway:8080'
+import { API_BASE } from '@/lib/api-base'
 
 export async function POST(request: NextRequest) {
   try {
-    await fetch(`${GATEWAY_URL}/auth/logout`, {
+    await fetch(`${API_BASE}/auth/logout`, {
       method: 'POST',
       headers: request.headers.get('cookie') ? { cookie: request.headers.get('cookie') as string } : {},
     })

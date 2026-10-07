@@ -6,12 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { API_BASE as API_ROOT } from '@/lib/api-base'
+import { API_BASE } from '@/lib/api-base'
 import { useDataset } from '@/context/dataset-provider'
+import { useSearchParams } from 'next/navigation'
 
 type Mensaje = { autor: 'usuario' | 'asistente'; mensaje: string; created_at: string }
-
-const API_BASE = API_ROOT + '/rag'
 
 function formatFechaHora(iso: string | undefined): string {
   if (!iso) return ''
@@ -35,20 +34,31 @@ export function DatasetChatbotView() {
   const [escribiendo, setEscribiendo] = useState(false)
   const [cargandoChat, setCargandoChat] = useState(true)
   const [hasActiveChat, setHasActiveChat] = useState<boolean | null>(null)
+  const [titulo, setTitulo] = useState<string | null>(null)
   const finRef = useRef<HTMLDivElement>(null)
 
+  const tituloVisible = titulo?.trim() ? titulo : 'Sin título'
+
   const { datasetSeleccionado } = useDataset();
+
+  const searchParams = useSearchParams()
+  let dataset_name = searchParams.get('dataset_name')
 
   useEffect(() => {
     async function cargarChatActivo() {
       try {
-        const res = await fetch(`${API_BASE}/chat?dataset_name=${datasetSeleccionado}`, {
+        if (!dataset_name){
+          dataset_name = datasetSeleccionado
+        }
+
+        const res = await fetch(`${API_BASE}/rag/chat?dataset_name=${dataset_name}`, {
           method: 'GET',
           credentials: 'include',
         })
         if (res.status === 404) {
           setHasActiveChat(false)
           setMensajes([])
+          setTitulo(null)
           return
         }
 
@@ -56,10 +66,12 @@ export function DatasetChatbotView() {
 
         const data: {
           chat_id: string
+          titulo?: string | null
           mensajes: { autor: 'usuario' | 'asistente'; mensaje: string; created_at: string }[]
         } = await res.json()
 
-        setMensajes(data.mensajes)
+        setMensajes(data.mensajes ?? [])
+        setTitulo(data.titulo ?? null)
         setHasActiveChat(true)
         
       } catch (e) {
@@ -79,7 +91,7 @@ export function DatasetChatbotView() {
   async function iniciarNuevoChat() {
     try {
       setCargandoChat(true)
-      const res = await fetch(`${API_BASE}/chat`, {
+      const res = await fetch(`${API_BASE}/rag/chat`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -88,7 +100,9 @@ export function DatasetChatbotView() {
         }),
       })
       if (!res.ok) throw new Error(`POST /chat ${res.status}`)
+      const data: { titulo?: string | null } = await res.json().catch(() => ({}))
       setMensajes([])
+      setTitulo(data.titulo ?? null)
       setHasActiveChat(true)
     } catch (e) {
       console.error('Error iniciando chat:', e)
@@ -106,7 +120,7 @@ export function DatasetChatbotView() {
     setEntrada('')
     setEscribiendo(true)
 
-    const respuesta = await fetch(`${API_BASE}/message`, {
+    const respuesta = await fetch(`${API_BASE}/rag/message`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -126,7 +140,8 @@ export function DatasetChatbotView() {
 
     const data: { 
       respuesta: { autor: 'usuario' | 'asistente'; mensaje: string; created_at: string }; 
-      pregunta: { created_at: string } 
+      pregunta: { created_at: string };
+      titulo?: string | null;
     } = await respuesta.json()
 
     // Si el backend devolvió el mensaje_usuario con created_at real, corrige el optimista
@@ -145,6 +160,7 @@ export function DatasetChatbotView() {
     }
 
     setMensajes((m) => [...m, data.respuesta])
+    if (data.titulo) setTitulo(data.titulo)
     setEscribiendo(false)
   }
 
@@ -178,7 +194,8 @@ export function DatasetChatbotView() {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-2">
+        <p className="truncate text-sm font-medium" title={tituloVisible}>{tituloVisible}</p>
         <Button
           variant="outline"
           size="sm"

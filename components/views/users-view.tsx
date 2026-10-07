@@ -5,8 +5,7 @@ import { UserPlus, Trash2, Check, TriangleAlert, ShieldAlert, KeyRound } from 'l
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-
-const AUTH_BASE = 'http://localhost:8080/auth'
+import { API_BASE} from '@/lib/api-base'
 
 type UsuarioReal = {
   id: string
@@ -35,7 +34,7 @@ export function UsersView() {
 
   const cargar = useCallback(async () => {
     try {
-      const res = await fetch(`${AUTH_BASE}/admin/users`, { credentials: 'include' })
+      const res = await fetch(`${API_BASE}/auth/admin/users`, { credentials: 'include' })
       if (res.status === 401 || res.status === 403) {
         setEstado('denegado')
         return
@@ -70,7 +69,7 @@ export function UsersView() {
     setMensaje(null)
     setErrorMensaje(null)
     try {
-      const res = await fetch(`${AUTH_BASE}/admin/users`, {
+      const res = await fetch(`${API_BASE}/auth/admin/users`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -97,7 +96,7 @@ export function UsersView() {
     if (nuevoRol === u.role) return
     setErrorMensaje(null)
     try {
-      const res = await fetch(`${AUTH_BASE}/admin/users/${u.id}/role`, {
+      const res = await fetch(`${API_BASE}/auth/admin/users/${u.id}/role`, {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -122,7 +121,7 @@ export function UsersView() {
     setErrorMensaje(null)
     setMensaje(null)
     try {
-      const res = await fetch(`${AUTH_BASE}/admin/users/${porClave.id}/password`, {
+      const res = await fetch(`${API_BASE}/auth/admin/users/${porClave.id}/password`, {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -144,7 +143,7 @@ export function UsersView() {
   async function eliminar(id: string) {
     setErrorMensaje(null)
     try {
-      const res = await fetch(`${AUTH_BASE}/admin/users/${id}`, {
+      const res = await fetch(`${API_BASE}/auth/admin/users/${id}`, {
         method: 'DELETE',
         credentials: 'include',
       })

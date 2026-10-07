@@ -1,17 +1,125 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { History, Trash2, MessageCircle, Database } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { historialChats, type Chat } from '@/lib/mock-data'
+import { API_BASE } from '@/lib/api-base'
+import { useDatasetsQuery } from '@/context/dataset-provider'
+import { useRouter } from 'next/navigation'
+
+interface Chat {
+  "titulo": string,
+  "chat_id": string, 
+  "fecha_creacion": string, 
+  "updated_at": string, 
+  "activo": boolean, 
+  "dataset_id": string 
+}
+
+interface Chats {
+  total: number
+  chats: Chat[]
+}
+
+const chatMock: Chats = {
+  total: 0,
+  chats: []
+}
+
 
 export function ChatHistoryView() {
-  const [chats, setChats] = useState<Chat[]>(historialChats)
+  const [chats, setChats] = useState<Chats>(chatMock)
+  const { data: datasets } = useDatasetsQuery()
 
-  function eliminar(id: string) {
-    setChats((c) => c.filter((chat) => chat.id !== id))
+  const router = useRouter()
+
+  const buscarChats = async() => {
+    try {
+      const respuesta = await fetch(`${API_BASE}/rag/chats`,        
+        {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      )
+
+      if (respuesta.ok) {
+        const data : Chats = await respuesta.json()
+        console.log('Chats obtenidos:', data)
+        setChats(data)
+      }
+    } catch (e) {
+      console.error('Error buscando chats:', e)
+    }
+  }
+
+  useEffect(() => {
+    buscarChats()
+  }, [])
+
+  async function eliminar(id: string) {
+    const respuesta = await fetch(`${API_BASE}/rag/chat`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chat_id: id
+      })
+    })
+
+    if (!respuesta.ok)
+      return
+
+    buscarChats()
+  }
+
+  async function eliminarTodos() {
+    const respuesta = await fetch(`${API_BASE}/rag/chats`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
+
+    if (!respuesta.ok)
+      return
+
+    buscarChats()
+  }
+
+  async function redirigir(chat_id: string, dataset_id: string) {
+    const respuesta = await fetch(`${API_BASE}/rag/activate_chat`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chat_id : chat_id
+      })
+    })
+
+    if (!respuesta.ok)
+      return
+
+    if (dataset_id != null && dataset_id != '') {
+      const dataset = datasets?.find((d) => d.dataset_id === dataset_id)
+
+      if (!dataset) return
+
+      router.push(`/chatbot-dataset/?dataset_name=${dataset?.dataset_name}`)
+
+      return
+    }
+
+    router.push('/chatbot-general')
   }
 
   return (
@@ -19,8 +127,8 @@ export function ChatHistoryView() {
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
           <CardTitle>Conversaciones guardadas</CardTitle>
-          {chats.length > 0 && (
-            <Button variant="destructive" size="sm" onClick={() => setChats([])}>
+          { chats && chats.total > 0 && (
+            <Button variant="destructive" size="sm" onClick={() => eliminarTodos()}>
               <Trash2 />
               Eliminar todo
             </Button>
@@ -28,29 +136,29 @@ export function ChatHistoryView() {
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-2.5">
-        {chats.length === 0 ? (
+        {chats && chats.total === 0 ? (
           <div className="flex flex-col items-center gap-2 py-14 text-center">
             <History className="size-8 text-muted-foreground" />
             <p className="text-sm font-medium">No hay conversaciones</p>
             <p className="text-sm text-muted-foreground">Las consultas que realices con los chatbots aparecerán aquí.</p>
           </div>
         ) : (
-          chats.map((chat) => (
-            <div key={chat.id} className="flex items-center gap-3 rounded-lg border border-border p-3.5">
+          chats && chats.chats && chats.chats.map((chat) => (
+            <div key={chat.chat_id} className="flex items-center gap-3 rounded-lg border border-border p-3.5 hover:bg-muted cursor-pointer" onClick={() => redirigir(chat.chat_id, chat.dataset_id)}>
               <span className="flex size-9 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                {chat.tipo === 'General' ? <MessageCircle className="size-4" /> : <Database className="size-4" />}
+                {chat.dataset_id ? <Database className="size-4" /> : <MessageCircle className="size-4" />}
               </span>
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="truncate text-sm font-medium">{chat.titulo}</span>
                 <span className="text-xs text-muted-foreground">
-                  {chat.fecha} · {chat.mensajes} mensajes
+                  Fecha creación: {chat.fecha_creacion}
                 </span>
               </div>
-              <Badge variant="outline">{chat.tipo}</Badge>
+              <Badge variant="outline">{chat.dataset_id ? 'Dataset' : 'General'}</Badge>
               <Button
                 variant="ghost"
                 size="icon-sm"
-                onClick={() => eliminar(chat.id)}
+                onClick={(e) => { e.stopPropagation(); eliminar(chat.chat_id) }}
                 aria-label={`Eliminar chat ${chat.titulo}`}
                 className="text-muted-foreground hover:text-destructive"
               >

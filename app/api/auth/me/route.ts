@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const GATEWAY_URL = process.env.GATEWAY_URL || process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://api-gateway:8080'
+import { API_BASE } from '@/lib/api-base'
 
 export async function GET(request: NextRequest) {
   let upstream: Response
   try {
-    upstream = await fetch(`${GATEWAY_URL}/auth/me`, {
+    upstream = await fetch(`${API_BASE}/auth/me`, {
       headers: request.headers.get('cookie') ? { cookie: request.headers.get('cookie') as string } : {},
     })
   } catch {

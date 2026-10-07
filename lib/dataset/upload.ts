@@ -12,6 +12,7 @@ export interface SubirDatasetParams {
   columnaTexto: string
   columnaClase: string | null
   columnaFecha: string | null
+  columnaUsuario: string | null
   formatoOriginal: DatasetOriginalFormat
   formatoDetectado: AutoConvertSourceFormat | null
   formatoFecha?: WhatsappLocale | null
@@ -40,6 +41,10 @@ export async function subirDataset(
 
   if (params.columnaFecha) {
     formData.append("columnaFecha", params.columnaFecha)
+  }
+
+  if (params.columnaUsuario) {
+    formData.append("columnaUsuario", params.columnaUsuario)
   }
 
   if (params.formatoDetectado) {

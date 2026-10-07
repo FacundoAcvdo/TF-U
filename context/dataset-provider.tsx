@@ -74,6 +74,6 @@ export function useDataset() {
 export function useDatasetsQuery() {
   return useQuery<DatasetInfo[]>({
     queryKey: ['datasets'],
-    queryFn: fetchDatasets, // 👈 Al ponerlo aquí, garantizas que la función siempre acompañe a la llave
+    queryFn: fetchDatasets,
   });
 }

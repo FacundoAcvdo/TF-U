@@ -130,6 +130,9 @@ export function UploadView() {
   const [columnaFecha, setColumnaFecha] =
     useState('')
 
+  const [columnaUsuario, setColumnaUsuario] =
+    useState('')
+
   const [formatoAutomatico, setFormatoAutomatico] = useState<
     Extract<AutoConvertSourceFormat, 'whatsapp-chat' | 'labeled-folders'> | null
   >(null)
@@ -189,6 +192,7 @@ export function UploadView() {
     setColumnaTexto('')
     setColumnaClase('')
     setColumnaFecha('')
+    setColumnaUsuario('')
     setSinClasificar(false)
     setEsDeChat(false)
 
@@ -319,6 +323,7 @@ export function UploadView() {
     setColumnaTexto('')
     setColumnaClase('')
     setColumnaFecha('')
+    setColumnaUsuario('')
     setSinClasificar(false)
     setEsDeChat(false)
     setFormatoAutomatico(null)
@@ -346,6 +351,7 @@ export function UploadView() {
         columnaTexto,
         columnaClase: sinClasificar ? null : columnaClase || null,
         columnaFecha: esDeChat ? columnaFecha || null : null,
+        columnaUsuario: esDeChat && formatoAutomatico !== 'whatsapp-chat' ? columnaUsuario || null : null,
         formatoOriginal,
         formatoDetectado: formatoAutomatico,
         formatoFecha: esDeChat && columnaFecha ? whatsappLocale : null,
@@ -675,6 +681,7 @@ export function UploadView() {
 
                 if (!value) {
                   setColumnaFecha('')
+                  setColumnaUsuario('')
                 }
               }}
             />
@@ -711,6 +718,45 @@ export function UploadView() {
 
           {esDeChat && formatoAutomatico !== 'whatsapp-chat' && (
             <label className="flex flex-col gap-1.5 text-sm font-medium">
+              Columna de usuario
+
+              <Select
+                value={columnaUsuario}
+                onValueChange={(value) => setColumnaUsuario(value ?? '')}
+                disabled={!preview || !esDeChat}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar columna" />
+                </SelectTrigger>
+
+                <SelectContent>
+                  {columnas
+                    .filter(
+                      (column) =>
+                        column.name !== columnaTexto
+                    )
+                    .map((column) => (
+                      <SelectItem
+                        key={column.name}
+                        value={column.name}
+                      >
+                        {column.name}
+                        {' '}
+                        <span className="text-muted-foreground">
+                          ({column.type})
+                        </span>
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <span className="text-xs font-normal text-muted-foreground">
+                Quién escribió cada mensaje. Se usará para prefijar cada mensaje como <strong>[fecha] autor: texto</strong> en la búsqueda.
+              </span>
+            </label>
+          )}
+
+          {esDeChat && formatoAutomatico !== 'whatsapp-chat' && (
+            <label className="flex flex-col gap-1.5 text-sm font-medium">
               Formato de fecha
               <Select
                 value={whatsappLocale}
@@ -741,7 +787,8 @@ export function UploadView() {
               estado !== 'idle' ||
               !columnaTexto ||
               (!sinClasificar && !columnaClase) ||
-              (esDeChat && !columnaFecha)
+              (esDeChat && !columnaFecha) ||
+              (esDeChat && formatoAutomatico !== 'whatsapp-chat' && !columnaUsuario)
             }
             className="mt-1"
           >

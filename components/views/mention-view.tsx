@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useDataset } from '@/context/dataset-provider'
-import { API_BASE as API_ROOT } from '@/lib/api-base'
+import { API_BASE } from '@/lib/api-base'
 
 const VALIDACION_CRUZADA = 'Validación Cruzada'
 const ENTRENAMIENTO_PRUEBA = 'Entrenamiento y Prueba'
@@ -40,8 +40,6 @@ function formatearPorcentaje(valor: number): string {
   const truncado = Math.trunc(valor * 100 * 100) / 100
   return `${truncado.toFixed(2)}%`
 }
-
-const CLASIFICACION_BASE = API_ROOT + '/classification'
 
 type ResumenMenciones = {
   truePositive: number
@@ -118,7 +116,7 @@ export function MentionView() {
     }
 
     try {
-      const res = await fetch(`${CLASIFICACION_BASE}/detectar_menciones`, {
+      const res = await fetch(`${API_BASE}/classification/detectar_menciones`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -140,7 +138,7 @@ export function MentionView() {
       // (antes viajaba en base64 dentro del JSON y tumbaba la conexión con BERT).
       setResultado(data.resumen)
       setModeloDescargaUrl(
-        `${CLASIFICACION_BASE}/descargar_modelo?model_id=${encodeURIComponent(data.model_id ?? '')}`,
+        `${API_BASE}/classification/descargar_modelo?model_id=${encodeURIComponent(data.model_id ?? '')}`,
       )
       setNombreArchivo(data.nombre_archivo ?? 'modelo.zip')
       setEstado('done')
