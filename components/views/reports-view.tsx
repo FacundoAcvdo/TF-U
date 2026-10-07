@@ -204,7 +204,6 @@ const CATALOGO = [
   { id: 'embeddings', titulo: 'Visualización de embeddings' },
   { id: 'chats', titulo: 'Chats del chatbot' },
   { id: 'emociones', titulo: 'Emociones negativas' },
-  { id: 'clasificador', titulo: 'Clasificador entrenado' },
 ]
 
 type Disponibilidad = {
