@@ -7,6 +7,7 @@ import { AnalysisRunner } from '@/components/analysis-runner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { API_BASE } from '@/lib/api-base'
 import {
   Select,
   SelectContent,
@@ -122,7 +123,7 @@ export function RiskView() {
     if (!datasetSeleccionado) return
     setEstado('running')
     try {
-      const respuesta = await fetch('http://localhost:8080/suicide/analyzeRisk', {
+      const respuesta = await fetch(`${API_BASE}/suicide/analyzeRisk`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -142,7 +143,7 @@ export function RiskView() {
     const cargar = async () => {
       try {
         setEstado('running')
-        const respuesta = await fetch('http://localhost:8080/suicide/getResults', {
+        const respuesta = await fetch(`${API_BASE}/suicide/getResults`, {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
