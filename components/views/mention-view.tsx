@@ -32,6 +32,14 @@ const modelos = [
   'BERT',
 ] as const
 
+const C_OPS_LOGREG = ['0.1', '0.5', '1', '2', '5']
+const C_OPS_SVM = ['0.25', '0.5', '1', '2']
+const ITER_OPS = ['500', '1000', '2000', '3000']
+const RF_EST_OPS = ['100', '200', '400']
+const RF_DEPTH_OPS = ['auto', '10', '20']
+const RF_LEAF_OPS = ['1', '2']
+const NB_SMOOTH_OPS = ['1e-9', '1e-8', '1e-7']
+
 type Modelo = (typeof modelos)[number]
 
 const MODELOS_SIN_VALIDACION_CRUZADA: Modelo[] = ['BERT']
@@ -67,6 +75,17 @@ export function MentionView() {
   const [modeloDescargaUrl, setModeloDescargaUrl] = useState<string | null>(null)
   const [nombreArchivo, setNombreArchivo] = useState<string>('modelo.zip')
   const [errorMensaje, setErrorMensaje] = useState<string | null>(null)
+  const [modificarParams, setModificarParams] = useState(false)
+  const [cLogreg, setCLogreg] = useState('1')
+  const [iterLogreg, setIterLogreg] = useState('1000')
+  const [cSvm, setCSvm] = useState('1')
+  const [iterSvm, setIterSvm] = useState('3000')
+  const [nEst, setNEst] = useState('100')
+  const [maxDepth, setMaxDepth] = useState('auto')
+  const [minLeaf, setMinLeaf] = useState('1')
+  const [varSmooth, setVarSmooth] = useState('1e-9')
+  const [bertModelo, setBertModelo] = useState('auto')
+  const [bertRapido, setBertRapido] = useState(false)
 
   const { datasetSeleccionado } = useDataset()
 
@@ -103,6 +122,29 @@ export function MentionView() {
 
     const usaValidacionCruzada = soportaValidacionCruzada && metodoDeEntrenamiento === VALIDACION_CRUZADA
 
+    let hiperparametros: Record<string, number | string | boolean | null> | undefined
+    if (modificarParams && esBert) {
+      hiperparametros = {
+        bert_modelo: bertModelo,
+        bert_rapido: bertRapido,
+      }
+    }
+    if (modificarParams && !esBert) {
+      if (modeloSeleccionado === 'Logistic Regression') {
+        hiperparametros = { C: Number(cLogreg), max_iter: Number(iterLogreg) }
+      } else if (modeloSeleccionado === 'Support Vector Machine') {
+        hiperparametros = { C: Number(cSvm), max_iter: Number(iterSvm) }
+      } else if (modeloSeleccionado === 'Random Forest') {
+        hiperparametros = {
+          n_estimators: Number(nEst),
+          max_depth: maxDepth === 'auto' ? null : Number(maxDepth),
+          min_samples_leaf: Number(minLeaf),
+        }
+      } else if (modeloSeleccionado === 'Naive Bayes') {
+        hiperparametros = { var_smoothing: Number(varSmooth) }
+      }
+    }
+
     const body = {
       dataset: datasetSeleccionado,
       modelo: modeloSeleccionado,
@@ -113,6 +155,7 @@ export function MentionView() {
             porcentaje_entrenamiento: porcentajeEntrenamiento,
             porcentaje_prueba: porcentajePrueba,
           }),
+      ...(hiperparametros ? { hiperparametros } : {}),
     }
 
     try {
@@ -134,8 +177,6 @@ export function MentionView() {
 
       const data = await res.json()
 
-      // El modelo queda guardado en el servidor y se descarga por link
-      // (antes viajaba en base64 dentro del JSON y tumbaba la conexión con BERT).
       setResultado(data.resumen)
       setModeloDescargaUrl(
         `${API_BASE}/classification/descargar_modelo?model_id=${encodeURIComponent(data.model_id ?? '')}`,
@@ -301,6 +342,131 @@ export function MentionView() {
                 </span>
               </div>
             )}
+
+            {!resultado && (
+              <div className="flex flex-col gap-3 rounded-lg border px-3.5 py-3">
+                <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={modificarParams}
+                    onChange={(e) => setModificarParams(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  Modificar parámetros
+                </label>
+                {modificarParams && esBert && (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-muted-foreground">Modelo base (auto detecta idioma)</label>
+                      <Select value={bertModelo} onValueChange={(v) => setBertModelo(v ?? 'auto')}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectGroup>
+                          <SelectItem value="auto">Auto (por idioma)</SelectItem>
+                          <SelectItem value="es">Español (Distil)</SelectItem>
+                          <SelectItem value="en">Inglés (Distil)</SelectItem>
+                          <SelectItem value="es_base">Español grande (lento)</SelectItem>
+                        </SelectGroup></SelectContent>
+                      </Select>
+                    </div>
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={bertRapido}
+                        onChange={(e) => setBertRapido(e.target.checked)}
+                        className="h-4 w-4"
+                      />
+                      Modo rápido (solo capa final, mucho más veloz)
+                    </label>
+                  </div>
+                )}
+                {modificarParams && modeloSeleccionado === 'Logistic Regression' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-muted-foreground">C (regularización inversa)</label>
+                      <Select value={cLogreg} onValueChange={(v) => setCLogreg(v ?? '1')}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectGroup>
+                          {C_OPS_LOGREG.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                        </SelectGroup></SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-muted-foreground">max_iter</label>
+                      <Select value={iterLogreg} onValueChange={(v) => setIterLogreg(v ?? '1000')}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectGroup>
+                          {ITER_OPS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                        </SelectGroup></SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+                {modificarParams && modeloSeleccionado === 'Support Vector Machine' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-muted-foreground">C</label>
+                      <Select value={cSvm} onValueChange={(v) => setCSvm(v ?? '1')}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectGroup>
+                          {C_OPS_SVM.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                        </SelectGroup></SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-muted-foreground">max_iter</label>
+                      <Select value={iterSvm} onValueChange={(v) => setIterSvm(v ?? '3000')}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectGroup>
+                          {ITER_OPS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                        </SelectGroup></SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+                {modificarParams && modeloSeleccionado === 'Random Forest' && (
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-muted-foreground">n_estimators</label>
+                      <Select value={nEst} onValueChange={(v) => setNEst(v ?? '100')}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectGroup>
+                          {RF_EST_OPS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                        </SelectGroup></SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-muted-foreground">max_depth</label>
+                      <Select value={maxDepth} onValueChange={(v) => setMaxDepth(v ?? 'auto')}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectGroup>
+                          {RF_DEPTH_OPS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                        </SelectGroup></SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-muted-foreground">min_samples_leaf</label>
+                      <Select value={minLeaf} onValueChange={(v) => setMinLeaf(v ?? '1')}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectGroup>
+                          {RF_LEAF_OPS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                        </SelectGroup></SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+                {modificarParams && modeloSeleccionado === 'Naive Bayes' && (
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-muted-foreground">var_smoothing</label>
+                    <Select value={varSmooth} onValueChange={(v) => setVarSmooth(v ?? '1e-9')}>
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectGroup>
+                        {NB_SMOOTH_OPS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                      </SelectGroup></SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -355,7 +521,6 @@ export function MentionView() {
                 </div>
               </div>
 
-              {/* MATRIZ DE CONFUSIÓN DINÁMICA (Soporta múltiples clases) */}
               <div className="w-full flex flex-col items-center gap-2">
                 <span className="text-xs font-medium text-muted-foreground">
                   Matriz de Confusión (Filas: Real, Columnas: Predicha)
