@@ -16,8 +16,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { EmbeddingsScatter } from '@/components/charts/embeddings-scatter'
 import { useDataset } from '@/context/dataset-provider'
+import { API_BASE } from '@/lib/api-base'
 
-const REPORT_BASE = 'http://localhost:8080/report'
+const REPORT_BASE = `${API_BASE}/report`
 
 const PDF_BG = '#ffffff'
 const PDF_TX = '#1f2937'
