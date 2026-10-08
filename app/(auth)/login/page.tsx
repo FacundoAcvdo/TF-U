@@ -1,43 +1,52 @@
 'use client'
 
-import { useState } from 'react'
-import { Activity, Lock, Mail, LoaderCircle, ShieldAlert } from 'lucide-react'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Activity, Lock, Mail, LoaderCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-export function LoginView({ onLogin }: { onLogin: (email: string) => void }) {
-  const [email, setEmail] = useState('facevedo@unsl.edu.ar')
-  const [password, setPassword] = useState('abc123')
+function LoginInner() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [cargando, setCargando] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const next = searchParams.get('next') || '/cargar-dataset'
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setCargando(true)
+    setError(null)
 
-    const response = await fetch('http://localhost:8080/auth/login', {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ email, password })
-    })
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
 
-    if (!response.ok) {
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        const msg = (data as { detail?: string; error?: string })?.detail || (data as { error?: string })?.error || 'Error al iniciar. Intenta nuevamente más tarde.'
+        setError(msg)
+        setCargando(false)
+        return
+      }
+
+      if (!data || !(data as { user?: unknown }).user) {
+        setError('Error al iniciar sesión. Por favor, verifica tus credenciales.')
+        setCargando(false)
+        return
+      }
+
+      router.push(next)
+      router.refresh()
+    } catch {
+      setError('No se pudo conectar con el servidor.')
       setCargando(false)
-      alert('Error al iniciar. Intenta nuevamente más tarde.')
-      return
     }
-
-    const data = await response.json()
-
-    if (!data.user){
-      setCargando(false)
-      alert('Error al iniciar sesión. Por favor, verifica tus credenciales.')
-      return
-    }
-
-    setCargando(false)
-    onLogin(email)
   }
 
   return (
@@ -61,8 +70,7 @@ export function LoginView({ onLogin }: { onLogin: (email: string) => void }) {
           </p>
         </div>
 
-        <p className="flex items-start gap-2 text-xs leading-relaxed text-sidebar-foreground/60 text-pretty">
-        </p>
+        <p className="flex items-start gap-2 text-xs leading-relaxed text-sidebar-foreground/60 text-pretty" />
       </section>
 
       {/* Panel de acceso */}
@@ -72,6 +80,12 @@ export function LoginView({ onLogin }: { onLogin: (email: string) => void }) {
             <h2 className="text-xl font-semibold tracking-tight">Iniciar sesión</h2>
             <p className="text-sm text-muted-foreground">Accede con tu cuenta institucional.</p>
           </div>
+
+          {error && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
 
           <div className="flex flex-col gap-4">
             <label className="flex flex-col gap-1.5 text-sm font-medium">
@@ -112,5 +126,13 @@ export function LoginView({ onLogin }: { onLogin: (email: string) => void }) {
         </form>
       </section>
     </main>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-dvh items-center justify-center">Cargando...</div>}>
+      <LoginInner />
+    </Suspense>
   )
 }

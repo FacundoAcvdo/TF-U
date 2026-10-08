@@ -1,0 +1,21 @@
+# Dependencias y compilación
+node_modules
+.next
+out
+build
+
+# Control de versiones
+.git
+.gitignore
+
+# Archivos de entorno y logs
+.env*.local
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Configuraciones del editor e IDEs
+.vscode
+.idea
+.DS_Store

@@ -86,9 +86,7 @@ function formatValue(value: unknown): string {
     return ''
   }
 
-  if (value instanceof Date) {
-    return value.toLocaleString('es')
-  }
-
+  // Mostrar tal cual viene del archivo, sin formateo adicional.
+  // Para XLSX con cellDates:false, las fechas ya vienen como string formateado de Excel.
   return String(value)
 }

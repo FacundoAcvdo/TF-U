@@ -2,12 +2,10 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Upload,
   ChartColumn,
-  Settings,
   Sparkles,
   Cloud,
-  HeartCrack,
+  Blocks,
   Layers,
-  ShieldAlert,
   Gauge,
   ChartLine,
   TrendingUp,
@@ -16,7 +14,10 @@ import {
   History,
   FileText,
   Users,
+  BroomSparkles,
+  Bubbles
 } from 'lucide-react'
+
 
 export type ViewId =
   | 'cargar-dataset'
@@ -41,6 +42,7 @@ export type NavItem = {
   id: ViewId
   label: string
   icon: LucideIcon
+  href: string
 }
 
 export type NavGroup = {
@@ -52,43 +54,43 @@ export const navGroups: NavGroup[] = [
   {
     titulo: 'Dataset',
     items: [
-      { id: 'cargar-dataset', label: 'Cargar dataset', icon: Upload },
-      { id: 'estadisticas', label: 'Estadísticas generales', icon: ChartColumn },
-      { id: 'limpieza-datos', label: 'Limpieza de datos', icon: Settings },
+      { id: 'cargar-dataset', label: 'Cargar dataset', icon: Upload, href: '/cargar-dataset' },
+      { id: 'estadisticas', label: 'Estadísticas generales', icon: ChartColumn, href: '/estadisticas' },
+      { id: 'limpieza-datos', label: 'Limpieza de datos', icon: BroomSparkles, href: '/limpieza-datos' },
     ],
   },
   {
     titulo: 'Análisis del texto',
     items: [
-      { id: 'embeddings', label: 'Visualización de embeddings', icon: Sparkles },
-      { id: 'nube-palabras', label: 'Nube de palabras', icon: Cloud },
-      { id: 'emociones-negativas', label: 'Emociones negativas', icon: HeartCrack },
-      { id: 'topicos', label: 'Tópicos principales', icon: Layers },
-      { id: 'evolucion-palabras', label: 'Evolución de palabras', icon: TrendingUp },
-      { id: 'sentimientos-tiempo', label: 'Sentimiento en el tiempo', icon: ChartLine },
+      { id: 'embeddings', label: 'Visualización de embeddings', icon: Sparkles, href: '/embeddings' },
+      { id: 'nube-palabras', label: 'Nube de palabras', icon: Cloud, href: '/nube-palabras' },
+      { id: 'emociones-negativas', label: 'Detección de emociones', icon: Bubbles, href: '/emociones-negativas' },
+      { id: 'topicos', label: 'Tópicos principales', icon: Layers, href: '/topicos' },
+      { id: 'evolucion-palabras', label: 'Evolución de palabras', icon: TrendingUp, href: '/evolucion-palabras' },
+      { id: 'sentimientos-tiempo', label: 'Sentimiento en el tiempo', icon: ChartLine, href: '/sentimientos-tiempo' },
     ],
   },
   {
     titulo: 'Detección de riesgo',
     items: [
-      { id: 'mencion-suicidio', label: 'Mención de suicidio', icon: ShieldAlert },
-      { id: 'nivel-riesgo', label: 'Nivel de riesgo', icon: Gauge },
+      { id: 'mencion-suicidio', label: 'Construir clasificador', icon: Blocks, href: '/mencion-suicidio' },
+      { id: 'nivel-riesgo', label: 'Nivel de riesgo', icon: Gauge, href: '/nivel-riesgo' },
     ],
   },
   {
     titulo: 'Asistentes',
     items: [
-      { id: 'chatbot-general', label: 'Chatbot general', icon: MessageCircle },
-      { id: 'chatbot-dataset', label: 'Chatbot del dataset', icon: Database },
-      { id: 'historial-chats', label: 'Historial de chats', icon: History },
+      { id: 'chatbot-general', label: 'Chatbot general', icon: MessageCircle, href: '/chatbot-general' },
+      { id: 'chatbot-dataset', label: 'Chatbot del dataset', icon: Database, href: '/chatbot-dataset' },
+      { id: 'historial-chats', label: 'Historial de chats', icon: History, href: '/historial-chats' },
     ],
   },
   {
     titulo: 'Administración',
     items: [
-      { id: 'informes', label: 'Generar informes', icon: FileText },
-      { id: 'usuarios', label: 'Gestión de usuarios', icon: Users },
-      { id: 'gestion-almacenamiento', label: 'Gestión de almacenamiento', icon: Database },
+      { id: 'informes', label: 'Generar informes', icon: FileText, href: '/informes' },
+      { id: 'usuarios', label: 'Gestión de usuarios', icon: Users, href: '/usuarios' },
+      { id: 'gestion-almacenamiento', label: 'Almacenamiento', icon: Database, href: '/gestion-almacenamiento' },
     ],
   },
 ]
@@ -162,4 +164,20 @@ export const viewMeta: Record<ViewId, { titulo: string; descripcion: string }> =
     titulo: 'Limpieza de datos',
     descripcion: 'Aplica diferentes procesos de limpieza sobre el dataset cargado.',
   },
+}
+
+// Helpers para App Router: mapeo ViewId ↔ href
+export const viewHref: Record<ViewId, string> = Object.fromEntries(
+  navGroups.flatMap((g) => g.items.map((i) => [i.id, i.href]))
+) as Record<ViewId, string>
+
+export const hrefToViewId: Record<string, ViewId> = Object.fromEntries(
+  navGroups.flatMap((g) => g.items.map((i) => [i.href, i.id]))
+) as Record<string, ViewId>
+
+export function getViewIdByPathname(pathname: string): ViewId | null {
+  const clean = pathname.split('?')[0].split('#')[0]
+  if (hrefToViewId[clean]) return hrefToViewId[clean]
+  const match = Object.keys(hrefToViewId).find((href) => clean.startsWith(href + '/'))
+  return match ? hrefToViewId[match] : null
 }

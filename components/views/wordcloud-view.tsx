@@ -2,44 +2,105 @@
 
 import { Cloud } from 'lucide-react'
 import { AnalysisRunner } from '@/components/analysis-runner'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { nubePalabras } from '@/lib/mock-data'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { useEffect, useState } from 'react'
+import { useDataset } from '@/context/dataset-provider'
+import { API_BASE } from '@/lib/api-base'
+import { WordCloudInteractive } from '@/components/charts/wordcloud-interactive'
 
-// Tamaño de fuente proporcional al peso del término.
-function fontSize(peso: number) {
-  return 0.85 + (peso / 100) * 2.1 // rem
+type WordFreq = {
+  text: string
+  value: number
+  count: number
+  percentage: number
+  doc_frequency: number
+  doc_percentage: number
+  rank: number
 }
 
-const colores = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-5)', 'var(--foreground)']
+type WordCloudResponse = {
+  dataset_id: string
+  documents_processed: number
+  total_words: number
+  unique_words: number
+  frequencies: WordFreq[]
+  max_count: number
+  min_count: number
+}
 
 export function WordCloudView() {
+  const [estado, setEstado] = useState<'idle' | 'done' | 'running'>('idle')
+  const [data, setData] = useState<WordCloudResponse | null>(null)
+
+  const { datasetSeleccionado } = useDataset()
+
+  const ejecutarWordCloud = async () => {
+    setEstado('running')
+    const respuesta = await fetch(API_BASE + '/wordcloud/visualizeWordCloud', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataset: datasetSeleccionado }),
+    })
+    if (!respuesta.ok) {
+      console.error('Error al generar nube:', respuesta.statusText)
+      setEstado('idle')
+      return
+    }
+    const json: WordCloudResponse = await respuesta.json()
+    setData(json)
+    setEstado('done')
+  }
+
+  useEffect(() => {
+    if (!datasetSeleccionado) return
+    const fetchData = async () => {
+      try {
+        setEstado('running')
+        const respuesta = await fetch(API_BASE + '/wordcloud/getWordCloudImage', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dataset: datasetSeleccionado }),
+        })
+        if (!respuesta.ok) { setEstado('idle'); return }
+        const json: WordCloudResponse = await respuesta.json()
+        if (!json.frequencies) { setEstado('idle'); return }
+        setData(json)
+        setEstado('done')
+      } catch { setEstado('idle') }
+    }
+    fetchData()
+  }, [datasetSeleccionado])
+
   return (
     <AnalysisRunner
       icon={Cloud}
       runLabel="Generar nube de palabras"
-      idleHint="Tokeniza el corpus, elimina palabras vacías y calcula la frecuencia de cada término para representarlos según su peso."
+      idleHint="Extrae los términos más frecuentes del dataset (sin stopwords, min 3 letras) y visualízalos de forma interactiva."
+      estado={estado}
+      ejecutarFuncion={ejecutarWordCloud}
     >
       <Card>
-        <CardHeader>
-          <CardTitle>Términos más frecuentes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 py-6">
-            {nubePalabras.map((p, i) => (
-              <span
-                key={p.texto}
-                className="font-semibold leading-none transition-colors hover:text-primary"
-                style={{
-                  fontSize: `${fontSize(p.peso)}rem`,
-                  color: colores[i % colores.length],
-                  opacity: 0.55 + (p.peso / 100) * 0.45,
-                }}
-                title={`Frecuencia relativa: ${p.peso}`}
-              >
-                {p.texto}
-              </span>
-            ))}
+        <CardHeader className="pb-3">
+          <div className="flex flex-col gap-1">
+            <h3 className="text-sm font-semibold tracking-tight">Nube de palabras</h3>
+            <p className="text-xs text-muted-foreground">
+              {data ? `${data.documents_processed} docs · ${data.total_words.toLocaleString()} palabras · top ${data.frequencies.length}` : 'top 200 términos'}
+            </p>
           </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {!data ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Sin datos</p>
+          ) : (
+            <WordCloudInteractive
+              frequencies={data.frequencies}
+              total_words={data.total_words}
+              unique_words={data.unique_words}
+              max_count={data.max_count}
+            />
+          )}
         </CardContent>
       </Card>
     </AnalysisRunner>

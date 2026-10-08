@@ -1,150 +1,263 @@
-import React, { useState } from 'react'
+"use client";
 
-import { FileText, Download, LoaderCircle, Check, Upload } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
+
+import { BrushCleaning } from "lucide-react";
+
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+  Alert,
+  AlertDescription,
+} from "@/components/ui/alert";
 
-const tratamientos = [
-  'Convertir a minúsculas',
-  'Quitar caracteres especiales y puntuación',
-  'Quitar stopwords',
-  'Quitar emojis',
-  'Quitar duplicados',
-  'Tratar valores nulos'
-]
+import {
+  Loader2,
+  Sparkles,
+} from "lucide-react";
 
-interface Informe {
-  id: string
-  nombre: string
-  formato: string
-  fecha: string
-  tamano: string
-}
+import { useDataset } from "../../context/dataset-provider";
+import { API_BASE } from "@/lib/api-base";
 
-function CleaningView() {
-  const [seleccion, setSeleccion] = useState<string[]>(tratamientos.slice(0, 4))
-  const [estado, setEstado] = useState<'idle' | 'generando' | 'listo'>('idle')
-  const [informe, setInforme] = useState<Informe | undefined>(undefined)
+import { CleaningConfig } from "../../lib/data-cleaning/cleaning-config";
+import { CleaningResult } from "../../lib/data-cleaning/cleaning-results";
 
-  function toggle(s: string) {
-    setSeleccion((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
-    setEstado('idle')
-  }
+import {
+  CleaningConfig as CleaningConfigType,
+  CleaningResult as CleaningResultType,
+} from "../../lib/data-cleaning/cleaning-types";
 
-  function generar() {
-    setEstado('generando')
-    window.setTimeout(() => {
-      setEstado('listo')
-      setInforme({
-        id: `r${Date.now()}`,
-        nombre: `Dataset limpio`,
-        formato: 'CSV',
-        fecha: new Date().toLocaleDateString('es'),
-        tamano: '1.8 MB',
-      })
-    }, 1400)
-  }
+const DEFAULT_CONFIG: CleaningConfigType = {
+  operations: [],
+  emoji_strategy: "keep",
+  hashtag_strategy: "keep",
+  language: "bilingual",
+};
 
+export function CleaningView() {
+  const { datasetSeleccionado } = useDataset();
+
+  const [config, setConfig] =
+    useState<CleaningConfigType>(DEFAULT_CONFIG);
+
+  const [result, setResult] =
+    useState<CleaningResultType | null>(null);
+
+  const [loading, setLoading] = useState(false);
+
+  const [error, setError] = useState<string | null>(null);
+
+  const handleClean = async () => {
+    setError(null);
+    setResult(null);
+
+    if (!datasetSeleccionado) {
+      setError("No hay ningún dataset seleccionado.");
+      return;
+    }
+
+    if (config.operations.length === 0) {
+      setError(
+        "Selecciona al menos una operación de limpieza.",
+      );
+      return;
+    }
+
+    if (
+      config.operations.includes("lemmatization") &&
+      !config.language
+    ) {
+      setError(
+        "Debes seleccionar un idioma para utilizar la lematización.",
+      );
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        API_BASE + "/datacleaning/cleanDataset",
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            dataset_name: datasetSeleccionado,
+
+            operations: config.operations,
+
+            emoji_strategy: config.emoji_strategy,
+
+            hashtag_strategy: config.hashtag_strategy,
+
+            language: config.language ?? "bilingual",
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        let message =
+          "No se pudo ejecutar la limpieza del dataset.";
+
+        try {
+          const errorData = await response.json();
+
+          if (typeof errorData?.detail === "string") {
+            message = errorData.detail;
+          }
+        } catch {
+
+        }
+
+        throw new Error(message);
+      }
+
+      const data = await response.json();
+
+      /*
+       * Si tu endpoint devuelve:
+       *
+       * {
+       *   status: "success",
+       *   source_dataset_id: "...",
+       *   ...
+       * }
+       *
+       * usamos solamente el contenido del resultado.
+       */
+      const cleaningResult: CleaningResultType =
+        data.result ?? data;
+
+      setResult(cleaningResult);
+    } catch (err) {
+      console.error("Error ejecutando cleaning:", err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Ocurrió un error durante la limpieza.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!result?.download_id) return;
+
+    const response = await fetch(
+      API_BASE + "/datacleaning/download",
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          download_id: result.download_id,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Error descargando el archivo.");
+    }
+
+    const blob = await response.blob();
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = result.filename;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.URL.revokeObjectURL(url);
+  };
 
   return (
-    <div className="grid gap-4 lg:grid-cols-5">
-      <Card className="lg:col-span-5">
-        <CardHeader>
-          <CardTitle>Limpiar Dataset</CardTitle>
-          <CardDescription>Selecciona los diferentes procesos de limpieza que deseas aplicar sobre el dataset.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="grid gap-2 sm:grid-cols-2">
-            {tratamientos.map((s) => {
-              const activo = seleccion.includes(s)
-              return (
-                <button
-                  key={s}
-                  onClick={() => toggle(s)}
-                  className={`flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors ${
-                    activo ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50'
-                  }`}
-                >
-                  <span
-                    className={`flex size-4 items-center justify-center rounded border ${
-                      activo ? 'border-primary bg-primary text-primary-foreground' : 'border-input'
-                    }`}
-                  >
-                    {activo && <Check className="size-3" />}
-                  </span>
-                  {s}
-                </button>
-              )
-            })}
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+            <Sparkles className="h-5 w-5 text-primary" />
           </div>
 
-          <div className="flex flex-col items-center gap-3">
-            <Button onClick={generar} disabled={seleccion.length === 0 || estado === 'generando'} className="w-full h-10">
-              {estado === 'generando' ? <LoaderCircle className="animate-spin" /> : <FileText />}
-              {estado === 'generando' ? 'Generando…' : 'Generar informe'}
-            </Button>
-            {estado === 'listo' && (
-              <span className="flex items-center gap-1.5 text-sm text-emerald-700">
-                <Check className="size-4" /> Dataset limpio y listo para descargar
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Limpieza de dataset
+            </h1>
 
-      {informe && (
-      <Card className="lg:col-span-5">
-        <CardHeader>
-          <CardTitle>Dataset limpio generado</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-2.5 py-1">
-            <div key={informe.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
-              <FileText className="size-4 text-primary" />
-              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="truncate text-sm font-medium">{informe.nombre}</span>
-                <span className="text-xs text-muted-foreground">
-                  {informe.fecha} · {informe.tamano}
-                </span>
-              </div>
-              <Badge variant="secondary">{informe.formato}</Badge>
-              <Button variant="ghost" size="icon-sm" aria-label="Descargar informe">
-                <Download />
-              </Button>
-            </div>
-        </CardContent>
-        <CardFooter>
-              <Dialog>
-                <form className="w-full">
-                  <DialogTrigger render={<Button variant="outline" className="w-full h-10">Cargar dataset limpio</Button>} />
-                  <DialogContent className="sm:max-w-sm">
-                    <DialogHeader>
-                      <DialogTitle>Confirmar carga</DialogTitle>
-                      <DialogDescription>
-                        Esta acción reemplazará el dataset original con el dataset limpio generado. ¿Deseas continuar?
-                      </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                      <Button type="submit">Cargar</Button>
-                      <DialogClose render={<Button variant="outline">Cancelar</Button>} />
-                    </DialogFooter>
-                  </DialogContent>
-                </form>
-              </Dialog>
-        </CardFooter>
-      </Card>)}
+            <p className="text-sm text-muted-foreground">
+              Configura las operaciones que quieres aplicar antes
+              del procesamiento del dataset.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Dataset seleccionado */}
+      <div className="rounded-xl border bg-muted/30 p-4">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Dataset seleccionado
+        </p>
+
+        <p className="mt-1 truncate text-sm font-medium">
+          {datasetSeleccionado ?? "Ningún dataset seleccionado"}
+        </p>
+      </div>
+
+      {/* Error */}
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            {error}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Configuración */}
+      <CleaningConfig
+        config={config}
+        onChange={setConfig}
+      />
+
+      {/* Acción */}
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          onClick={handleClean}
+          disabled={loading}
+          className="
+            h-12
+            px-7
+            text-base
+            font-semibold
+            shadow-sm
+            cursor-pointer
+            transition-all
+            hover:shadow-md
+          "
+        >
+          <BrushCleaning className="mr-2 h-5 w-5" />
+          {loading ? "Limpiando..." : "Ejecutar limpieza"}
+        </Button>
+      </div>
+
+      {/* Resultado */}
+      {result && (
+        <CleaningResult
+          result={result}
+          onDownload={handleDownload}
+        />
+      )}
     </div>
-  )
+  );
 }
-
-export default CleaningView

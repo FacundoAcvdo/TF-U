@@ -47,6 +47,26 @@ export function isWhatsappChat(text: string, sampleSize = 30): boolean {
   return matches / lines.length >= 0.5
 }
 
+export function detectWhatsappLocale(text: string): WhatsappLocale {
+  const fechaRe = /(\d{1,2})\/(\d{1,2})\/(\d{2,4})/g
+  let dmyHits = 0
+  let mdyHits = 0
+  let match: RegExpExecArray | null
+  let count = 0
+  while ((match = fechaRe.exec(text)) !== null && count < 50) {
+    const a = Number(match[1])
+    const b = Number(match[2])
+    // solo fechas desambiguables aportan evidencia
+    if (a > 12 && b <= 12) dmyHits++
+    else if (b > 12 && a <= 12) mdyHits++
+    count++
+  }
+  if (mdyHits > dmyHits) return "MDY"
+  if (dmyHits > mdyHits) return "DMY"
+  // ambiguo (ej 05/08) -> default DMY (formato hispano más común)
+  return "DMY"
+}
+
 function normalizeDate(raw: string, locale: WhatsappLocale): string {
   const parts = raw.split("/").map((p) => Number(p.trim()))
   let d: number, m: number, y: number
@@ -143,7 +163,8 @@ export async function previewTxt(
     )
   }
 
-  const csvContent = whatsappTxtToCsv(text, options?.locale ?? "DMY")
+  const locale = options?.locale ?? detectWhatsappLocale(text)
+  const csvContent = whatsappTxtToCsv(text, locale)
 
   return previewConvertedCsv(
     csvContent,

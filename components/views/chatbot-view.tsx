@@ -1,62 +1,151 @@
 'use client'
 
-import { useRef, useState } from 'react'
-import { Send, MessageCircle, Database } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Send, MessageCircle, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { API_BASE } from '@/lib/api-base'
 
-type Mensaje = { rol: 'usuario' | 'bot'; texto: string }
+type Mensaje = { autor: 'usuario' | 'asistente'; mensaje: string; created_at: string }
 
-type Variante = 'general' | 'dataset'
-
-const config: Record<
-  Variante,
-  { saludo: string; sugerencias: string[]; respuesta: string; icon: typeof MessageCircle }
-> = {
-  general: {
-    icon: MessageCircle,
-    saludo:
-      'Hola. Soy un asistente informativo sobre prevención del suicidio y salud mental. Puedo ofrecer información general y orientar sobre recursos de ayuda. No sustituyo la atención profesional.',
-    sugerencias: [
-      '¿Cuáles son los factores de riesgo más comunes?',
-      '¿Cómo puedo apoyar a alguien en crisis?',
-      '¿Qué señales de alerta debo conocer?',
-    ],
-    respuesta:
-      'Los factores de riesgo pueden incluir aislamiento social, antecedentes de trastornos del estado de ánimo y eventos vitales estresantes. Ante una crisis, es fundamental escuchar sin juzgar y derivar a servicios profesionales o líneas de ayuda locales lo antes posible.',
-  },
-  dataset: {
-    icon: Database,
-    saludo:
-      'Hola. Puedo responder preguntas en lenguaje natural sobre el dataset cargado: estadísticas, tópicos, emociones y niveles de riesgo detectados.',
-    sugerencias: [
-      '¿Qué tópico predomina en el tercer trimestre?',
-      '¿Cuántos mensajes son de riesgo alto?',
-      '¿Cómo evolucionó el sentimiento negativo?',
-    ],
-    respuesta:
-      'Según el dataset actual (12.480 registros), el tópico predominante es "Aislamiento social" (24%). El 15% de los mensajes se clasifican como riesgo alto o crítico, y el sentimiento negativo alcanzó su pico en junio (48%) antes de descender hacia final de año.',
-  },
+function formatFechaHora(iso: string | undefined): string {
+  if (!iso) return ''
+  try {
+    const d = new Date(iso)
+    return d.toLocaleString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return iso
+  }
 }
 
-export function ChatbotView({ variante }: { variante: Variante }) {
-  const c = config[variante]
-  const [mensajes, setMensajes] = useState<Mensaje[]>([{ rol: 'bot', texto: c.saludo }])
+export function ChatbotView() {
+  const [mensajes, setMensajes] = useState<Mensaje[]>([])
   const [entrada, setEntrada] = useState('')
   const [escribiendo, setEscribiendo] = useState(false)
+  const [cargandoChat, setCargandoChat] = useState(true)
+  const [hasActiveChat, setHasActiveChat] = useState<boolean | null>(null)
+  const [titulo, setTitulo] = useState<string | null>(null)
   const finRef = useRef<HTMLDivElement>(null)
 
-  function enviar(texto: string) {
+  const tituloVisible = titulo?.trim() ? titulo : 'Sin título'
+
+  useEffect(() => {
+    async function cargarChatActivo() {
+      try {
+        const res = await fetch(`${API_BASE}/rag/chat`, {
+          method: 'GET',
+          credentials: 'include',
+        })
+        if (res.status === 404) {
+          setHasActiveChat(false)
+          setMensajes([])
+          setTitulo(null)
+          return
+        }
+
+        if (!res.ok) throw new Error(`GET /chat ${res.status}`)
+
+        const data: {
+          chat_id: string
+          titulo?: string | null
+          mensajes: { autor: 'usuario' | 'asistente'; mensaje: string; created_at: string }[]
+        } = await res.json()
+
+        setMensajes(data.mensajes ?? [])
+        setTitulo(data.titulo ?? null)
+        setHasActiveChat(true)
+        
+      } catch (e) {
+        console.error('Error cargando chat activo:', e)
+        setHasActiveChat(false)
+      } finally {
+        setCargandoChat(false)
+      }
+    }
+    cargarChatActivo()
+  }, [])
+
+  useEffect(() => {
+    finRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [mensajes, escribiendo])
+
+  async function iniciarNuevoChat() {
+    try {
+      setCargandoChat(true)
+      const res = await fetch(`${API_BASE}/rag/chat`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      if (!res.ok) throw new Error(`POST /chat ${res.status}`)
+      const data: { titulo?: string | null } = await res.json().catch(() => ({}))
+      setMensajes([])
+      setTitulo(data.titulo ?? null)
+      setHasActiveChat(true)
+    } catch (e) {
+      console.error('Error iniciando chat:', e)
+    } finally {
+      setCargandoChat(false)
+    }
+  }
+
+  async function enviar(texto: string) {
     const limpio = texto.trim()
     if (!limpio || escribiendo) return
-    setMensajes((m) => [...m, { rol: 'usuario', texto: limpio }])
+    // Mensaje optimista con timestamp local (se reemplazará con el real del backend si está disponible)
+    const nowIso = new Date().toISOString()
+    setMensajes((m) => [...m, { autor: 'usuario', mensaje: limpio, created_at: nowIso }])
     setEntrada('')
     setEscribiendo(true)
-    window.setTimeout(() => {
-      setMensajes((m) => [...m, { rol: 'bot', texto: c.respuesta }])
+
+    const respuesta = await fetch(`${API_BASE}/rag/message`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mensaje: limpio }),
+    })
+
+    if (!respuesta.ok) {
+      console.error('Error al enviar el mensaje:', respuesta.statusText)
+      const err = await respuesta.text().catch(() => '')
+      setMensajes((m) => [...m, { autor: 'asistente', mensaje: `Error: ${respuesta.status} ${err || respuesta.statusText}`, created_at: new Date().toISOString() }])
       setEscribiendo(false)
-      window.setTimeout(() => finRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-    }, 900)
+      return
+    }
+
+    const data: { 
+      respuesta: { autor: 'usuario' | 'asistente'; mensaje: string; created_at: string }; 
+      pregunta: { created_at: string };
+      titulo?: string | null;
+    } = await respuesta.json()
+
+    // Si el backend devolvió el mensaje_usuario con created_at real, corrige el optimista
+    if (data.pregunta.created_at) {
+      setMensajes((prev) => {
+        const copy = [...prev]
+        // último usuario es el que acabamos de insertar optimista
+        for (let i = copy.length - 1; i >= 0; i--) {
+          if (copy[i].autor === 'usuario' && copy[i].mensaje === limpio) {
+            copy[i] = { ...copy[i], created_at: data.pregunta!.created_at }
+            break
+          }
+        }
+        return copy
+      })
+    }
+
+    setMensajes((m) => [...m, data.respuesta])
+    if (data.titulo) setTitulo(data.titulo)
+    setEscribiendo(false)
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -66,20 +155,113 @@ export function ChatbotView({ variante }: { variante: Variante }) {
     }
   }
 
+  if (cargandoChat) {
+    return (
+      <Card className="flex h-[calc(100dvh-13rem)] items-center justify-center">
+        <p className="text-sm text-muted-foreground">Cargando chat...</p>
+      </Card>
+    )
+  }
+
+  if (!hasActiveChat) {
+    return (
+      <Card className="flex h-[calc(100dvh-13rem)] flex-col items-center justify-center gap-4 p-6 text-center">
+        <MessageCircle className="size-10 text-muted-foreground" />
+        <div className="space-y-1">
+          <p className="text-sm font-medium">No tienes un chat activo</p>
+          <p className="text-xs text-muted-foreground">Inicia un nuevo chat para consultar al asistente técnico.</p>
+        </div>
+        <Button onClick={iniciarNuevoChat}>Iniciar nuevo chat</Button>
+      </Card>
+    )
+  }
+
   return (
-    <Card className="flex h-[calc(100dvh-13rem)] flex-col overflow-hidden">
-      <div className="flex-1 space-y-4 overflow-y-auto p-5">
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="truncate text-sm font-medium" title={tituloVisible}>{tituloVisible}</p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={iniciarNuevoChat}
+          disabled={cargandoChat || escribiendo}
+          title="Descarta el chat actual e inicia una nueva sesión"
+        >
+          <Plus className="size-4" />
+          Nueva sesión
+        </Button>
+      </div>
+      <Card className="flex h-[calc(100dvh-13rem)] flex-col overflow-hidden">
+        <div className="flex-1 space-y-4 overflow-y-auto p-5">
+        {mensajes.length === 0 && !escribiendo && (
+          <p className="text-center text-sm text-muted-foreground py-8">Sin mensajes. Escribe tu primera consulta.</p>
+        )}
         {mensajes.map((m, i) => (
-          <div key={i} className={`flex ${m.rol === 'usuario' ? 'justify-end' : 'justify-start'}`}>
+          <div
+            key={i}
+            className={`group flex flex-col ${m.autor === 'usuario' ? 'items-end' : 'items-start'}`}
+          >
             <div
-              className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed text-pretty ${
-                m.rol === 'usuario'
+              className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                m.autor === 'usuario'
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted text-foreground'
               }`}
             >
-              {m.texto}
+              {m.autor === 'usuario' ? (
+                <p className="whitespace-pre-wrap break-words">{m.mensaje}</p>
+              ) : (
+                <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-p:leading-relaxed prose-strong:font-semibold prose-ul:my-2 prose-ol:my-2 prose-li:my-1 break-words [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      p: ({ children }) => <p className="my-2 leading-relaxed whitespace-pre-wrap">{children}</p>,
+                      strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                      em: ({ children }) => <em className="italic">{children}</em>,
+                      ul: ({ children }) => <ul className="my-2 list-disc pl-5 space-y-1">{children}</ul>,
+                      ol: ({ children }) => <ol className="my-2 list-decimal pl-5 space-y-1">{children}</ol>,
+                      li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+                      a: ({ children, href }) => (
+                        <a href={href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:opacity-80">
+                          {children}
+                        </a>
+                      ),
+                      code: ({ children }) => (
+                        <code className="rounded bg-black/10 px-1 py-0.5 text-[13px] font-mono dark:bg-white/10">{children}</code>
+                      ),
+                      pre: ({ children }) => (
+                        <pre className="my-2 overflow-x-auto rounded-lg bg-black/5 p-3 text-[13px] dark:bg-white/5">{children}</pre>
+                      ),
+                      table: ({ children }) => (
+                        <div className="my-3 overflow-x-auto rounded-lg border border-border">
+                          <table className="w-full border-collapse text-sm">{children}</table>
+                        </div>
+                      ),
+                      thead: ({ children }) => <thead className="bg-muted-foreground/10">{children}</thead>,
+                      th: ({ children }) => <th className="border-b border-border px-3 py-1.5 text-left text-xs font-semibold">{children}</th>,
+                      td: ({ children }) => <td className="border-b border-border/50 px-3 py-1.5 align-top">{children}</td>,
+                      blockquote: ({ children }) => (
+                        <blockquote className="my-2 border-l-2 border-border pl-3 italic opacity-80">{children}</blockquote>
+                      ),
+                      h2: ({ children }) => <h2 className="mb-2 mt-4 text-sm font-semibold">{children}</h2>,
+                      h3: ({ children }) => <h3 className="mb-1 mt-3 text-sm font-semibold">{children}</h3>,
+                      hr: () => <hr className="my-3 border-border" />,
+                    }}
+                  >
+                    {m.mensaje}
+                  </ReactMarkdown>
+                </div>
+              )}
             </div>
+            {m.created_at && (
+              <span
+                className={`mt-1 text-[11px] font-normal tracking-tight opacity-0 transition-opacity duration-200 group-hover:opacity-100 ${
+                  m.autor === 'usuario' ? 'text-muted-foreground/60 mr-1' : 'text-muted-foreground/50 ml-1'
+                }`}
+              >
+                {formatFechaHora(m.created_at)}
+              </span>
+            )}
           </div>
         ))}
         {escribiendo && (
@@ -94,34 +276,21 @@ export function ChatbotView({ variante }: { variante: Variante }) {
         <div ref={finRef} />
       </div>
 
-      {mensajes.length <= 1 && (
-        <div className="flex flex-wrap gap-2 px-5 pb-2">
-          {c.sugerencias.map((s) => (
-            <button
-              key={s}
-              onClick={() => enviar(s)}
-              className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              {s}
-            </button>
-          ))}
+        <div className="border-t border-border p-3">
+          <div className="flex items-center gap-2">
+            <input
+              value={entrada}
+              onChange={(e) => setEntrada(e.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder="Escribe tu consulta…"
+              className="h-10 flex-1 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
+            />
+            <Button size="icon-lg" onClick={() => enviar(entrada)} disabled={!entrada.trim() || escribiendo} aria-label="Enviar">
+              <Send />
+            </Button>
+          </div>
         </div>
-      )}
-
-      <div className="border-t border-border p-3">
-        <div className="flex items-center gap-2">
-          <input
-            value={entrada}
-            onChange={(e) => setEntrada(e.target.value)}
-            onKeyDown={onKeyDown}
-            placeholder="Escribe tu consulta…"
-            className="h-10 flex-1 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
-          />
-          <Button size="icon-lg" onClick={() => enviar(entrada)} disabled={!entrada.trim() || escribiendo} aria-label="Enviar">
-            <Send />
-          </Button>
-        </div>
-      </div>
-    </Card>
+      </Card>
+    </div>
   )
 }

@@ -49,38 +49,38 @@
 
 :root {
   color-scheme: light;
-  --background: oklch(0.985 0.004 220);
+  --background: oklch(0.985 0.005 255);
   --foreground: oklch(0.24 0.02 245);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.24 0.02 245);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.24 0.02 245);
-  --primary: oklch(0.52 0.07 205);
+  --primary: oklch(0.488 0.243 264.376);
   --primary-foreground: oklch(0.99 0.005 220);
   --secondary: oklch(0.95 0.01 220);
   --secondary-foreground: oklch(0.32 0.03 240);
   --muted: oklch(0.96 0.006 220);
   --muted-foreground: oklch(0.53 0.02 240);
-  --accent: oklch(0.93 0.03 200);
-  --accent-foreground: oklch(0.3 0.04 235);
+  --accent: oklch(72.907% 0.11169 269.27 / 0.26);
+  --accent-foreground: oklch(34.763% 0.16384 264.561);
   --destructive: oklch(0.55 0.19 25);
   --border: oklch(0.9 0.008 220);
   --input: oklch(0.9 0.008 220);
-  --ring: oklch(0.52 0.07 205);
-  --chart-1: oklch(0.55 0.08 205);
+  --ring: oklch(0.488 0.243 264.376);
+  --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.65 0.09 165);
   --chart-3: oklch(0.62 0.11 55);
   --chart-4: oklch(0.58 0.14 25);
   --chart-5: oklch(0.5 0.06 260);
   --radius: 0.625rem;
-  --sidebar: oklch(0.31 0.03 240);
-  --sidebar-foreground: oklch(0.92 0.01 220);
-  --sidebar-primary: oklch(0.62 0.08 200);
-  --sidebar-primary-foreground: oklch(0.99 0.005 220);
-  --sidebar-accent: oklch(0.37 0.03 240);
-  --sidebar-accent-foreground: oklch(0.97 0.005 220);
-  --sidebar-border: oklch(0.38 0.03 240);
-  --sidebar-ring: oklch(0.62 0.08 200);
+  --sidebar: oklch(0.96 0.018 255);
+  --sidebar-foreground: oklch(0.24 0.02 245);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(72.907% 0.11169 269.27 / 0.26);
+  --sidebar-accent-foreground: oklch(34.763% 0.16384 264.561);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
 }
 
 .dark {
@@ -185,16 +185,16 @@
   }
   /* Fondo o carril de la barra */
   ::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: oklch(91.714% 0.00432 237.293);
     border-radius: 4px;
   }
   /* El botoncito que se mueve */
   ::-webkit-scrollbar-thumb {
-    background: #888;
+    background: oklch(89.126% 0.01538 235.626);
     border-radius: 4px;
   }
   /* Color al pasar el cursor */
   ::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    background: oklch(86.551% 0.0265 235.531);
   }
 }

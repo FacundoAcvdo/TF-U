@@ -306,7 +306,8 @@ export async function previewXlsx(
 
   const workbook = XLSX.read(buffer, {
     type: 'array',
-    cellDates: true,
+    cellDates: false,
+    cellNF: false,
   })
 
   const firstSheetName = workbook.SheetNames[0]
@@ -325,6 +326,7 @@ export async function previewXlsx(
       Record<string, unknown>
     >(worksheet, {
       defval: '',
+      raw: false,
     })
 
   if (rows.length === 0) {
