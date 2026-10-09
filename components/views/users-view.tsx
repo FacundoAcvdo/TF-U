@@ -5,6 +5,14 @@ import { UserPlus, Trash2, Check, TriangleAlert, ShieldAlert, KeyRound } from 'l
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { API_BASE} from '@/lib/api-base'
 
 type UsuarioReal = {
@@ -216,14 +224,17 @@ export function UsersView() {
               </label>
               <label className="flex flex-col gap-1.5 text-sm font-medium">
                 Rol
-                <select
-                  value={rol}
-                  onChange={(e) => setRol(e.target.value)}
-                  className="h-9 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
-                >
-                  <option value="user">Usuario</option>
-                  <option value="admin">Administrador</option>
-                </select>
+                <Select value={rol} onValueChange={(v) => setRol(v ?? 'user')}>
+                  <SelectTrigger className="w-full">
+                    <span className="flex flex-1 text-left">{etiquetaRol(rol)}</span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="user">Usuario</SelectItem>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </label>
               <Button type="submit" disabled={procesando}>
                 <UserPlus />
@@ -254,15 +265,20 @@ export function UsersView() {
                     Alta: {u.created_at && u.created_at !== 'None' ? new Date(u.created_at).toLocaleDateString() : '—'}
                   </span>
                 </div>
-                <select
+                <Select
                   value={u.role}
-                  onChange={(e) => void cambiarRol(u, e.target.value)}
-                  className="h-8 rounded-lg border border-input bg-background px-2 text-xs outline-none"
-                  aria-label={`Rol de ${u.email}`}
+                  onValueChange={(v) => void cambiarRol(u, v ?? u.role)}
                 >
-                  <option value="user">Usuario</option>
-                  <option value="admin">Administrador</option>
-                </select>
+                  <SelectTrigger className="h-8 w-[130px] text-xs" aria-label={`Rol de ${u.email}`}>
+                    <span className="flex flex-1 text-left">{etiquetaRol(u.role)}</span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="user">Usuario</SelectItem>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
                 <Badge variant={u.role === 'admin' ? 'default' : 'secondary'}>
                   {etiquetaRol(u.role)}
                 </Badge>
@@ -274,6 +290,7 @@ export function UsersView() {
                     setNuevaClave('')
                   }}
                   aria-label={`Cambiar contraseña de ${u.email}`}
+                  title="Cambiar contraseña"
                   className="text-muted-foreground hover:text-foreground"
                 >
                   <KeyRound />
@@ -283,6 +300,7 @@ export function UsersView() {
                   size="icon-sm"
                   onClick={() => setPorEliminar(u)}
                   aria-label={`Eliminar a ${u.email}`}
+                  title="Eliminar usuario"
                   className="text-muted-foreground hover:text-destructive"
                 >
                   <Trash2 />
