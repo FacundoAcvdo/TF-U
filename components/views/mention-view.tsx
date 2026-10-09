@@ -292,8 +292,8 @@ export function MentionView() {
                     <span>Prueba: {porcentajePrueba}%</span>
                   </div>
                   <Slider
-                    min={10}
-                    max={90}
+                    min={5}
+                    max={95}
                     step={5}
                     disabled={Boolean(resultado)}
                     value={porcentajeTrain}
