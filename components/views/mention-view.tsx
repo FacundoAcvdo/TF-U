@@ -152,7 +152,6 @@ export function MentionView() {
       ...(usaValidacionCruzada
         ? { k: Number(valorK) }
         : {
-            porcentaje_entrenamiento: porcentajeEntrenamiento,
             porcentaje_prueba: porcentajePrueba,
           }),
       ...(hiperparametros ? { hiperparametros } : {}),
