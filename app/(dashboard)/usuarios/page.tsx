@@ -1,8 +1,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { UsersView } from '@/components/views/users-view'
-
-const GATEWAY_URL = process.env.GATEWAY_URL || process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://api-gateway:8080'
+import { API_BASE } from '@/lib/api-base'
 
 export default async function Page() {
   const cookieStore = await cookies()
@@ -10,7 +9,7 @@ export default async function Page() {
   let esAdmin = false
   if (token) {
     try {
-      const res = await fetch(`${GATEWAY_URL}/auth/me`, {
+      const res = await fetch(`${API_BASE}/auth/me`, {
         headers: { cookie: `access_token=${token}` },
         cache: 'no-store',
       })

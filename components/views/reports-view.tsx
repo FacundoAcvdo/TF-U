@@ -18,8 +18,6 @@ import { EmbeddingsScatter } from '@/components/charts/embeddings-scatter'
 import { useDataset } from '@/context/dataset-provider'
 import { API_BASE } from '@/lib/api-base'
 
-const REPORT_BASE = `${API_BASE}/report`
-
 const PDF_BG = '#ffffff'
 const PDF_TX = '#1f2937'
 const PDF_MUT = '#6b7280'
@@ -233,7 +231,7 @@ export function ReportsView() {
     }
     setCargando(true)
     setErrorMensaje(null)
-    fetch(`${REPORT_BASE}/disponibles?dataset=${encodeURIComponent(datasetSeleccionado)}`, {
+    fetch(`${API_BASE}/report/disponibles?dataset=${encodeURIComponent(datasetSeleccionado)}`, {
       credentials: 'include',
     })
       .then(async (res) => {
@@ -247,7 +245,7 @@ export function ReportsView() {
         }
         setDisponibilidad(mapa)
         setSeleccion(CATALOGO.filter((c) => mapa[c.id]?.disponible).map((c) => c.id))
-        fetch(`${REPORT_BASE}/datos-graficos`, {
+        fetch(`${API_BASE}/report/datos-graficos`, {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
@@ -353,7 +351,7 @@ export function ReportsView() {
     try {
       const graficos = recolectarSvgs(seleccion)
       const pngs = recolectarPngs(seleccion)
-      const res = await fetch(`${REPORT_BASE}/generar`, {
+      const res = await fetch(`${API_BASE}/report/generar`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
