@@ -156,8 +156,15 @@ export function TopicsView() {
     if (task.status === 'running') {
       setEstado('running')
     } else if (task.status === 'succeeded') {
-      setTopics(task.result as TopicModelingResult)
-      setEstado('done')
+      // El job puede haberse iniciado con otro max_topics: solo se aplica
+      // si coincide, si no se libera igual (el aviso de éxito ya salió).
+      const jobMax = Number((task.params as { max_topics?: unknown } | null | undefined)?.max_topics)
+      if (!task.params || !Number.isFinite(jobMax) || jobMax === maxTopics) {
+        setTopics(task.result as TopicModelingResult)
+        setEstado('done')
+      } else {
+        setEstado('idle')
+      }
       consumeTask(task.key)
     } else {
       setEstado('idle')

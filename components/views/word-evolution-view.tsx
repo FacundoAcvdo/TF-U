@@ -199,8 +199,15 @@ export function WordEvolutionView() {
     if (task.status === 'running') {
       setEstado('running')
     } else if (task.status === 'succeeded') {
-      aplicarResultado(task.result as EvolucionPalabras)
-      setEstado('done')
+      // Solo se aplica si el job es del remitente actual; si no, se libera
+      // igual (el aviso de éxito ya salió y el botón vuelve a habilitarse).
+      const jobRemitente = (task.params as { remitente?: unknown } | null | undefined)?.remitente
+      if (!task.params || jobRemitente === remitenteSeleccionado) {
+        aplicarResultado(task.result as EvolucionPalabras)
+        setEstado('done')
+      } else {
+        setEstado('idle')
+      }
       consumeTask(task.key)
     } else {
       setEstado('idle')

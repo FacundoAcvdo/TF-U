@@ -18,6 +18,7 @@ export type TaskEntry = {
   status: TaskStatus
   result?: unknown
   errorCode?: number | null
+  params?: Record<string, unknown> | null
   successMessage: string
   consumed: boolean
 }
@@ -61,6 +62,7 @@ async function fetchJob(service: string, jobId: string) {
     status: string
     result?: unknown
     error_code?: number | null
+    params?: Record<string, unknown> | null
   }
 }
 
@@ -68,6 +70,9 @@ export function JobsProvider({ children }: { children: ReactNode }) {
   const [tasks, setTasks] = useState<Record<string, TaskEntry>>({})
   const tasksRef = useRef(tasks)
   tasksRef.current = tasks
+  // Un mismo job puede estar registrado bajo varias keys (ej. cambio de
+  // parámetros con el job en curso): el toast final se muestra una sola vez.
+  const notifiedRef = useRef<Set<string>>(new Set())
 
   // Polling global: sobrevive a la navegación (el provider vive en el layout).
   // El toast final se muestra aunque el usuario esté en otra pantalla.
@@ -75,7 +80,7 @@ export function JobsProvider({ children }: { children: ReactNode }) {
     const id = setInterval(async () => {
       const pendientes = Object.values(tasksRef.current).filter((t) => t.status === 'running')
       for (const t of pendientes) {
-        let job: { status: string; result?: unknown; error_code?: number | null }
+        let job: { status: string; result?: unknown; error_code?: number | null; params?: Record<string, unknown> | null }
         try {
           job = await fetchJob(t.service, t.jobId)
         } catch {
@@ -85,8 +90,11 @@ export function JobsProvider({ children }: { children: ReactNode }) {
         setTasks((prev) => {
           const actual = prev[t.key]
           if (!actual || actual.status !== 'running') return prev
-          if (job.status === 'succeeded') toast.success(t.successMessage)
-          else toast.error(errorMessageForJob(job.error_code))
+          if (!notifiedRef.current.has(t.jobId)) {
+            notifiedRef.current.add(t.jobId)
+            if (job.status === 'succeeded') toast.success(t.successMessage)
+            else toast.error(errorMessageForJob(job.error_code))
+          }
           return {
             ...prev,
             [t.key]: {
@@ -94,6 +102,7 @@ export function JobsProvider({ children }: { children: ReactNode }) {
               status: job.status as TaskStatus,
               result: job.result,
               errorCode: job.error_code ?? null,
+              params: job.params ?? actual.params ?? null,
             },
           }
         })
@@ -120,6 +129,7 @@ export function JobsProvider({ children }: { children: ReactNode }) {
         dataset: opts.dataset ?? null,
         jobId: data.job_id,
         status: 'running',
+        params: (opts.body as Record<string, unknown> | undefined) ?? null,
         successMessage: opts.successMessage,
         consumed: false,
       },
@@ -129,11 +139,11 @@ export function JobsProvider({ children }: { children: ReactNode }) {
   // Retoma un trabajo activo al (re)entrar a una pantalla, sin re-ejecutarlo.
   const adoptTask = useCallback(async (opts: AdoptTaskOptions) => {
     if (tasksRef.current[opts.key]) return
-    let lista: { jobs: { job_id: string; status: string }[] }
+    let lista: { jobs: { job_id: string; status: string; params?: Record<string, unknown> | null }[] }
     try {
       const params = new URLSearchParams({ job_type: opts.jobType })
       if (opts.dataset) params.set('dataset_name', opts.dataset)
-      lista = await apiFetch<{ jobs: { job_id: string; status: string }[] }>(
+      lista = await apiFetch<{ jobs: { job_id: string; status: string; params?: Record<string, unknown> | null }[] }>(
         `/${opts.service}/jobs?${params.toString()}`,
         { method: 'GET' },
         { silent: true },
@@ -154,6 +164,7 @@ export function JobsProvider({ children }: { children: ReactNode }) {
           dataset: opts.dataset ?? null,
           jobId: activo.job_id,
           status: 'running',
+          params: activo.params ?? null,
           successMessage: opts.successMessage,
           consumed: false,
         },

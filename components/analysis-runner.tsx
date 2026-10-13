@@ -54,7 +54,7 @@ export function AnalysisRunner({
           </span>
           <div className="flex max-w-md flex-col gap-1">
             <p className="text-sm font-medium text-foreground">
-              {estado === 'running' ? 'Procesando en segundo plano…' : 'Esta operación no se ejecuta automáticamente'}
+              {estado === 'running' ? 'Esperando resultados…' : 'Esta operación no se ejecuta automáticamente'}
             </p>
             <p className="text-sm text-muted-foreground text-pretty">
               {estado === 'running'

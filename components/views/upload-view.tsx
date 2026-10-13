@@ -157,10 +157,22 @@ export function UploadView() {
   const [archivoOriginalTxt, setArchivoOriginalTxt] =
     useState<File | null>(null)
 
-  const { tasks, startTask, consumeTask } = useJobs()
-  const archivoPendiente = archivoConvertido ?? archivo
-  const taskKey = archivoPendiente ? `upload:${archivoPendiente.name}` : null
-  const task = taskKey ? tasks[taskKey] : undefined
+  const { tasks, startTask, adoptTask, consumeTask } = useJobs()
+  // Key fija: una sola carga a la vez. Al volver a la pantalla, si hay una
+  // carga en curso se muestra "cargando" y no se permite otra ejecución.
+  const taskKey = 'upload'
+  const task = tasks[taskKey]
+
+  // Al montar: lista fresca + retomar carga en curso (si existe).
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['datasets'] })
+    adoptTask({
+      key: taskKey,
+      service: 'dataset',
+      jobType: 'upload',
+      successMessage: 'Dataset cargado correctamente.',
+    })
+  }, [])
 
   useEffect(() => {
     if (!task || task.consumed) return
@@ -379,7 +391,7 @@ export function UploadView() {
       })
 
       await startTask({
-        key: `upload:${archivoAEnviar.name}`,
+        key: taskKey,
         service: 'dataset',
         operation: 'uploadDataset',
         jobType: 'upload',
