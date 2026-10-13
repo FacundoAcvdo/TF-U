@@ -5,7 +5,7 @@ import { History, Trash2, MessageCircle, Database } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { API_BASE } from '@/lib/api-base'
+import { apiFetch } from '@/lib/api-fetch'
 import { useDatasetsQuery } from '@/context/dataset-provider'
 import { useRouter } from 'next/navigation'
 
@@ -37,23 +37,10 @@ export function ChatHistoryView() {
 
   const buscarChats = async() => {
     try {
-      const respuesta = await fetch(`${API_BASE}/rag/chats`,        
-        {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }
-      )
-
-      if (respuesta.ok) {
-        const data : Chats = await respuesta.json()
-        console.log('Chats obtenidos:', data)
-        setChats(data)
-      }
-    } catch (e) {
-      console.error('Error buscando chats:', e)
+      const data = await apiFetch<Chats>(`/rag/chats`, { method: 'GET' }, { silent: true })
+      setChats(data)
+    } catch {
+      // lectura de fondo: sin toast para no spamear; las acciones sí avisan
     }
   }
 
@@ -62,52 +49,36 @@ export function ChatHistoryView() {
   }, [])
 
   async function eliminar(id: string) {
-    const respuesta = await fetch(`${API_BASE}/rag/chat`, {
-      method: 'DELETE',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        chat_id: id
+    try {
+      await apiFetch(`/rag/chat`, {
+        method: 'DELETE',
+        body: JSON.stringify({ chat_id: id }),
       })
-    })
-
-    if (!respuesta.ok)
-      return
-
-    buscarChats()
+      buscarChats()
+    } catch {
+      // apiFetch ya mostró el toast de error
+    }
   }
 
   async function eliminarTodos() {
-    const respuesta = await fetch(`${API_BASE}/rag/chats`, {
-      method: 'DELETE',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    })
-
-    if (!respuesta.ok)
-      return
-
-    buscarChats()
+    try {
+      await apiFetch(`/rag/chats`, { method: 'DELETE' })
+      buscarChats()
+    } catch {
+      // apiFetch ya mostró el toast de error
+    }
   }
 
   async function redirigir(chat_id: string, dataset_id: string) {
-    const respuesta = await fetch(`${API_BASE}/rag/activate_chat`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        chat_id : chat_id
+    try {
+      await apiFetch(`/rag/activate_chat`, {
+        method: 'POST',
+        body: JSON.stringify({ chat_id: chat_id }),
       })
-    })
-
-    if (!respuesta.ok)
+    } catch {
+      // apiFetch ya mostró el toast de error
       return
+    }
 
     if (dataset_id != null && dataset_id != '') {
       const dataset = datasets?.find((d) => d.dataset_id === dataset_id)

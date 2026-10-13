@@ -11,7 +11,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { API_BASE } from '@/lib/api-base'
 import {
   Select,
   SelectContent,
@@ -29,6 +28,8 @@ import {
 } from '@/components/ui/dialog'
 
 import { useDataset } from '@/context/dataset-provider'
+import { useJobs } from '@/context/jobs-context'
+import { apiFetch } from '@/lib/api-fetch'
 
 type TopicModelingDocument = {
   document_id: string
@@ -117,30 +118,52 @@ export function TopicsView() {
   const [maxTopics, setMaxTopics] = useState<number>(20)
 
   const { datasetSeleccionado } = useDataset()
+  const { tasks, startTask, adoptTask, consumeTask } = useJobs()
+  const taskKey = datasetSeleccionado ? `topics:${datasetSeleccionado}:${maxTopics}` : null
+  const task = taskKey ? tasks[taskKey] : undefined
 
-  const ejecutarTopicModeling = async () => {
+  const ejecutarTopicModeling = () => {
+    if (!datasetSeleccionado || !taskKey) return
     setEstado('running')
 
-    const respuesta = await fetch(API_BASE + '/topicmodeling/getTopics', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    startTask({
+      key: taskKey,
+      service: 'topicmodeling',
+      operation: 'getTopics',
+      jobType: 'topics',
+      dataset: datasetSeleccionado,
+      body: {
         dataset: datasetSeleccionado,
         max_topics: maxTopics,
-      }),
-    })
-
-    if (!respuesta.ok) {
-      console.error('Error al obtener topicos principales:', respuesta.statusText)
-      setEstado('idle')
-      return
-    }
-
-    setTopics(respuesta.ok ? await respuesta.json() : null)
-
-    setEstado('done')
+      },
+      successMessage: 'Tópicos generados correctamente.',
+    }).catch(() => setEstado('idle'))
   }
+
+  useEffect(() => {
+    if (!datasetSeleccionado || !taskKey) return
+    adoptTask({
+      key: taskKey,
+      service: 'topicmodeling',
+      jobType: 'topics',
+      dataset: datasetSeleccionado,
+      successMessage: 'Tópicos generados correctamente.',
+    })
+  }, [datasetSeleccionado, maxTopics])
+
+  useEffect(() => {
+    if (!task || task.consumed) return
+    if (task.status === 'running') {
+      setEstado('running')
+    } else if (task.status === 'succeeded') {
+      setTopics(task.result as TopicModelingResult)
+      setEstado('done')
+      consumeTask(task.key)
+    } else {
+      setEstado('idle')
+      consumeTask(task.key)
+    }
+  }, [task])
 
   useEffect(() => {
     if (!datasetSeleccionado) {
@@ -153,22 +176,14 @@ export function TopicsView() {
       try {
         setEstado('running')
         setSelectedTopicId(null)
-        const respuesta = await fetch(API_BASE + '/topicmodeling/getTopicResults', {
+        const json = await apiFetch<TopicModelingResult>('/topicmodeling/getTopicResults', {
           method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             dataset: datasetSeleccionado,
             max_topics: maxTopics,
           }),
-        })
-        if (!respuesta.ok) {
-          setTopics(null)
-          setEstado('idle')
-          return
-        }
-        const json: TopicModelingResult = await respuesta.json()
-        if (!json.topics) {
+        }, { silent: true, ignoreNotFound: true })
+        if (!json?.topics) {
           setTopics(null)
           setEstado('idle')
           return

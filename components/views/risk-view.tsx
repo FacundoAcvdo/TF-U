@@ -7,7 +7,6 @@ import { AnalysisRunner } from '@/components/analysis-runner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { API_BASE } from '@/lib/api-base'
 import {
   Select,
   SelectContent,
@@ -27,6 +26,8 @@ import {
 } from '@/components/ui/table'
 import { ChartTooltip } from '@/components/chart-tooltip'
 import { useDataset } from '@/context/dataset-provider'
+import { useJobs } from '@/context/jobs-context'
+import { apiFetch } from '@/lib/api-fetch'
 
 type Nivel = 'nulo' | 'bajo' | 'medio' | 'potencial' | 'alto'
 
@@ -118,43 +119,59 @@ export function RiskView() {
   const [data, setData] = useState<RiskResponse | null>(null)
   const [filtro, setFiltro] = useState<'todos' | Nivel>('todos')
   const { datasetSeleccionado } = useDataset()
+  const { tasks, startTask, adoptTask, consumeTask } = useJobs()
+  const taskKey = datasetSeleccionado ? `risk:${datasetSeleccionado}` : null
+  const task = taskKey ? tasks[taskKey] : undefined
 
-  const ejecutarRiesgo = async () => {
-    if (!datasetSeleccionado) return
+  const ejecutarRiesgo = () => {
+    if (!datasetSeleccionado || !taskKey) return
     setEstado('running')
-    try {
-      const respuesta = await fetch(`${API_BASE}/suicide/analyzeRisk`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dataset: datasetSeleccionado, with_verification: true, top_k: 200 }),
-      })
-      if (!respuesta.ok) throw new Error(respuesta.statusText)
-      setData(await respuesta.json())
-      setEstado('done')
-    } catch (e) {
-      console.error('Error al estimar riesgo:', e)
-      setEstado('idle')
-    }
+    startTask({
+      key: taskKey,
+      service: 'suicide',
+      operation: 'analyzeRisk',
+      jobType: 'risk',
+      dataset: datasetSeleccionado,
+      body: { dataset: datasetSeleccionado, with_verification: true, top_k: 200 },
+      successMessage: 'Nivel de riesgo estimado correctamente.',
+    }).catch(() => setEstado('idle'))
   }
+
+  useEffect(() => {
+    if (!datasetSeleccionado || !taskKey) return
+    adoptTask({
+      key: taskKey,
+      service: 'suicide',
+      jobType: 'risk',
+      dataset: datasetSeleccionado,
+      successMessage: 'Nivel de riesgo estimado correctamente.',
+    })
+  }, [datasetSeleccionado])
+
+  useEffect(() => {
+    if (!task || task.consumed) return
+    if (task.status === 'running') {
+      setEstado('running')
+    } else if (task.status === 'succeeded') {
+      setData(task.result as RiskResponse)
+      setEstado('done')
+      consumeTask(task.key)
+    } else {
+      setEstado('idle')
+      consumeTask(task.key)
+    }
+  }, [task])
 
   useEffect(() => {
     if (!datasetSeleccionado) return
     const cargar = async () => {
       try {
         setEstado('running')
-        const respuesta = await fetch(`${API_BASE}/suicide/getResults`, {
+        const json = await apiFetch<RiskResponse>(`/suicide/getResults`, {
           method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ dataset: datasetSeleccionado }),
-        })
-        if (!respuesta.ok) {
-          setEstado('idle')
-          return
-        }
-        const json: RiskResponse = await respuesta.json()
-        if (!json.resumen) {
+        }, { silent: true, ignoreNotFound: true })
+        if (!json?.resumen) {
           setEstado('idle')
           return
         }

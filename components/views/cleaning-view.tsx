@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
@@ -17,7 +17,10 @@ import {
 } from "lucide-react";
 
 import { useDataset } from "../../context/dataset-provider";
+import { useJobs } from "@/context/jobs-context";
 import { API_BASE } from "@/lib/api-base";
+import { errorMessageForStatus } from "@/lib/api-errors";
+import { toast } from "sonner";
 
 import { CleaningConfig } from "../../lib/data-cleaning/cleaning-config";
 import { CleaningResult } from "../../lib/data-cleaning/cleaning-results";
@@ -47,6 +50,37 @@ export function CleaningView() {
 
   const [error, setError] = useState<string | null>(null);
 
+  const { tasks, startTask, adoptTask, consumeTask } = useJobs();
+  const taskKey = datasetSeleccionado ? `clean:${datasetSeleccionado}` : null;
+  const task = taskKey ? tasks[taskKey] : undefined;
+
+  useEffect(() => {
+    if (!datasetSeleccionado || !taskKey) return;
+    adoptTask({
+      key: taskKey,
+      service: "datacleaning",
+      jobType: "clean",
+      dataset: datasetSeleccionado,
+      successMessage: "Limpieza completada correctamente.",
+    });
+  }, [datasetSeleccionado]);
+
+  useEffect(() => {
+    if (!task || task.consumed) return;
+    if (task.status === "running") {
+      setLoading(true);
+    } else if (task.status === "succeeded") {
+      const data = task.result as { result?: CleaningResultType } & CleaningResultType;
+      const cleaningResult: CleaningResultType = data.result ?? data;
+      setResult(cleaningResult);
+      setLoading(false);
+      consumeTask(task.key);
+    } else {
+      setLoading(false);
+      consumeTask(task.key);
+    }
+  }, [task]);
+
   const handleClean = async () => {
     setError(null);
     setResult(null);
@@ -75,72 +109,32 @@ export function CleaningView() {
 
     setLoading(true);
 
+    if (!taskKey) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await fetch(
-        API_BASE + "/datacleaning/cleanDataset",
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            dataset_name: datasetSeleccionado,
+      await startTask({
+        key: taskKey,
+        service: "datacleaning",
+        operation: "cleanDataset",
+        jobType: "clean",
+        dataset: datasetSeleccionado,
+        body: {
+          dataset_name: datasetSeleccionado,
 
-            operations: config.operations,
+          operations: config.operations,
 
-            emoji_strategy: config.emoji_strategy,
+          emoji_strategy: config.emoji_strategy,
 
-            hashtag_strategy: config.hashtag_strategy,
+          hashtag_strategy: config.hashtag_strategy,
 
-            language: config.language ?? "bilingual",
-          }),
+          language: config.language ?? "bilingual",
         },
-      );
-
-      if (!response.ok) {
-        let message =
-          "No se pudo ejecutar la limpieza del dataset.";
-
-        try {
-          const errorData = await response.json();
-
-          if (typeof errorData?.detail === "string") {
-            message = errorData.detail;
-          }
-        } catch {
-
-        }
-
-        throw new Error(message);
-      }
-
-      const data = await response.json();
-
-      /*
-       * Si tu endpoint devuelve:
-       *
-       * {
-       *   status: "success",
-       *   source_dataset_id: "...",
-       *   ...
-       * }
-       *
-       * usamos solamente el contenido del resultado.
-       */
-      const cleaningResult: CleaningResultType =
-        data.result ?? data;
-
-      setResult(cleaningResult);
-    } catch (err) {
-      console.error("Error ejecutando cleaning:", err);
-
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Ocurrió un error durante la limpieza.",
-      );
-    } finally {
+        successMessage: "Limpieza completada correctamente.",
+      });
+    } catch {
       setLoading(false);
     }
   };
@@ -163,7 +157,8 @@ export function CleaningView() {
     );
 
     if (!response.ok) {
-      throw new Error("Error descargando el archivo.");
+      toast.error(errorMessageForStatus(response.status));
+      return;
     }
 
     const blob = await response.blob();

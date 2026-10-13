@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { API_BASE } from "@/lib/api-base";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface DatasetInfo {
     dataset_id: string
@@ -21,15 +21,13 @@ interface DatasetContextType {
 const DatasetContext = createContext<DatasetContextType | undefined>(undefined);
 
 const fetchDatasets = async (): Promise<DatasetInfo[]> => {
-  const response = await fetch(API_BASE + '/dataset/getDatasets', {
-    method: 'GET',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' }
-  });
-  
-  if (!response.ok) throw new Error('Error al obtener los datasets');
-  
-  const data: { datasets: DatasetInfo[] } = await response.json();
+  // Lectura de fondo global: silenciosa para no spamear (ej. 401 pre-login).
+  // Los errores de cada acción se avisan con toast en su propia vista.
+  const data = await apiFetch<{ datasets: DatasetInfo[] }>(
+    '/dataset/getDatasets',
+    { method: 'GET' },
+    { silent: true },
+  );
   return data.datasets;
 };
 

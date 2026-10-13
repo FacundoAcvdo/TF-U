@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Upload,
   FileText,
@@ -44,7 +44,8 @@ import { previewDataset } from '@/lib/dataset/preview'
 import type { DatasetPreviewData } from '@/lib/dataset/types'
 import type { AutoConvertSourceFormat } from '@/lib/dataset/autoConvert'
 import { obtenerFormatoOriginal } from '@/lib/dataset/autoConvert'
-import { subirDataset } from '@/lib/dataset/upload'
+import { buildUploadFormData } from '@/lib/dataset/upload'
+import { useJobs } from '@/context/jobs-context'
 import type { WhatsappLocale } from '@/lib/dataset/parsers/txt'
 import { detectWhatsappLocale } from '@/lib/dataset/parsers/txt'
 
@@ -155,6 +156,25 @@ export function UploadView() {
 
   const [archivoOriginalTxt, setArchivoOriginalTxt] =
     useState<File | null>(null)
+
+  const { tasks, startTask, consumeTask } = useJobs()
+  const archivoPendiente = archivoConvertido ?? archivo
+  const taskKey = archivoPendiente ? `upload:${archivoPendiente.name}` : null
+  const task = taskKey ? tasks[taskKey] : undefined
+
+  useEffect(() => {
+    if (!task || task.consumed) return
+    if (task.status === 'running') {
+      setEstado('cargando')
+    } else if (task.status === 'succeeded') {
+      queryClient.invalidateQueries({ queryKey: ['datasets'] })
+      setEstado('listo')
+      consumeTask(task.key)
+    } else {
+      setEstado('idle')
+      consumeTask(task.key)
+    }
+  }, [task])
 
   function manejarArchivoElegido(file: File) {
     const tipo = tipoArchivoEspecial(file)
@@ -346,7 +366,7 @@ export function UploadView() {
     try {
       const archivoAEnviar = archivoConvertido ?? archivo
 
-      await subirDataset({
+      const formData = buildUploadFormData({
         archivo: archivoAEnviar,
         columnaTexto,
         columnaClase: sinClasificar ? null : columnaClase || null,
@@ -356,18 +376,17 @@ export function UploadView() {
         formatoDetectado: formatoAutomatico,
         formatoFecha: esDeChat && columnaFecha ? whatsappLocale : null,
         esChat: esDeChat,
-      }, queryClient)
+      })
 
-      setEstado('listo')
-    } catch (err) {
-      console.error(err)
-
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'No se pudo subir el dataset'
-      )
-
+      await startTask({
+        key: `upload:${archivoAEnviar.name}`,
+        service: 'dataset',
+        operation: 'uploadDataset',
+        jobType: 'upload',
+        formData,
+        successMessage: 'Dataset cargado correctamente.',
+      })
+    } catch {
       setEstado('idle')
     }
   }

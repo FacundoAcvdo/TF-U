@@ -3,7 +3,8 @@ import { ChartColumn } from 'lucide-react'
 import { AnalysisRunner } from '@/components/analysis-runner'
 import { useEffect, useState } from 'react'
 import { useDataset } from '@/context/dataset-provider'
-import { API_BASE } from '@/lib/api-base'
+import { useJobs } from '@/context/jobs-context'
+import { apiFetch } from '@/lib/api-fetch'
 
 import {
   Table,
@@ -53,48 +54,68 @@ export function StatsView() {
   const [distribution, setDistribution] = useState<EDA_RESPONSE["distribution"] | null>(null)
 
   const { datasetSeleccionado } = useDataset()
+  const { tasks, startTask, adoptTask, consumeTask } = useJobs()
+  const taskKey = datasetSeleccionado ? `eda:${datasetSeleccionado}` : null
+  const task = taskKey ? tasks[taskKey] : undefined
 
-  const ejecutarEda = async () => {
-    setEstado('running')
-    const respuesta = await fetch(API_BASE + '/eda/eda', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dataset: datasetSeleccionado }),
-    })
-    if (!respuesta.ok) {
-      console.error('Error al calcular eda:', respuesta.statusText)
-      setEstado('idle')
-      return
-    }
-    const data : EDA_RESPONSE = await respuesta.json()
+  const aplicarResultado = (data: EDA_RESPONSE) => {
     setStats(data.corpus_stats)
     setClassStats(data.class_stats)
     setSentenceStats(data.sentence_stats)
     setSentenceFreq(data.sentence_freq)
     setDistribution(data.distribution)
-    setEstado('done')
   }
+
+  const ejecutarEda = () => {
+    if (!datasetSeleccionado || !taskKey) return
+    setEstado('running')
+    startTask({
+      key: taskKey,
+      service: 'eda',
+      operation: 'eda',
+      jobType: 'eda',
+      dataset: datasetSeleccionado,
+      body: { dataset: datasetSeleccionado },
+      successMessage: 'Estadísticas calculadas correctamente.',
+    }).catch(() => setEstado('idle'))
+  }
+
+  useEffect(() => {
+    if (!datasetSeleccionado || !taskKey) return
+    adoptTask({
+      key: taskKey,
+      service: 'eda',
+      jobType: 'eda',
+      dataset: datasetSeleccionado,
+      successMessage: 'Estadísticas calculadas correctamente.',
+    })
+  }, [datasetSeleccionado])
+
+  useEffect(() => {
+    if (!task || task.consumed) return
+    if (task.status === 'running') {
+      setEstado('running')
+    } else if (task.status === 'succeeded') {
+      aplicarResultado(task.result as EDA_RESPONSE)
+      setEstado('done')
+      consumeTask(task.key)
+    } else {
+      setEstado('idle')
+      consumeTask(task.key)
+    }
+  }, [task])
 
   useEffect(() => {
       if (!datasetSeleccionado) return
       const fetchResults = async () => {
         try {
           setEstado('running')
-          const respuesta = await fetch(API_BASE + '/eda/getResults', {
+          const data = await apiFetch<EDA_RESPONSE>('/eda/getResults', {
             method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ dataset: datasetSeleccionado }),
-          })  
-          if (!respuesta.ok) { setEstado('idle'); return }
-          const data : EDA_RESPONSE = await respuesta.json()
-          if (!data.corpus_stats || !data.class_stats) { setEstado('idle'); return }
-          setStats(data.corpus_stats)
-          setClassStats(data.class_stats)
-          setSentenceStats(data.sentence_stats)
-          setSentenceFreq(data.sentence_freq)
-          setDistribution(data.distribution)
+          }, { silent: true, ignoreNotFound: true })
+          if (!data?.corpus_stats || !data.class_stats) { setEstado('idle'); return }
+          aplicarResultado(data)
           setEstado('done')
         } catch { setEstado('idle') }
       }

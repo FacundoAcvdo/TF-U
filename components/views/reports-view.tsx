@@ -16,6 +16,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { EmbeddingsScatter } from '@/components/charts/embeddings-scatter'
 import { useDataset } from '@/context/dataset-provider'
+import { useJobs } from '@/context/jobs-context'
+import { apiFetch } from '@/lib/api-fetch'
+import { toast } from 'sonner'
 import { API_BASE } from '@/lib/api-base'
 
 const REPORT_BASE = `${API_BASE}/report`
@@ -225,6 +228,50 @@ export function ReportsView() {
   const [descargaUrl, setDescargaUrl] = useState<string | null>(null)
   const [nombreArchivo, setNombreArchivo] = useState('informe.pdf')
 
+  const { tasks, startTask, adoptTask, consumeTask } = useJobs()
+  const taskKey = datasetSeleccionado ? `report:${datasetSeleccionado}` : null
+  const task = taskKey ? tasks[taskKey] : undefined
+
+  useEffect(() => {
+    if (!datasetSeleccionado || !taskKey) return
+    adoptTask({
+      key: taskKey,
+      service: 'report',
+      jobType: 'report',
+      dataset: datasetSeleccionado,
+      successMessage: 'Informe generado correctamente.',
+    })
+  }, [datasetSeleccionado])
+
+  useEffect(() => {
+    if (!task || task.consumed) return
+    if (task.status === 'running') {
+      setEstado('generando')
+      return
+    }
+    consumeTask(task.key)
+    if (task.status === 'failed') {
+      setEstado('idle')
+      return
+    }
+    // succeeded: descargar el PDF del job
+    const result = task.result as { filename?: string } | undefined
+    fetch(`${REPORT_BASE}/descargar/${task.jobId}`, { credentials: 'include' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`descarga-${res.status}`)
+        const blob = await res.blob()
+        if (descargaUrl) URL.revokeObjectURL(descargaUrl)
+        const url = URL.createObjectURL(blob)
+        setDescargaUrl(url)
+        setNombreArchivo(result?.filename ?? `informe_${datasetSeleccionado}.pdf`)
+        setEstado('listo')
+      })
+      .catch(() => {
+        toast.error('Error en el servidor. Intenta más tarde.')
+        setEstado('idle')
+      })
+  }, [task])
+
   useEffect(() => {
     if (!datasetSeleccionado) {
       setDisponibilidad({})
@@ -233,46 +280,47 @@ export function ReportsView() {
     }
     setCargando(true)
     setErrorMensaje(null)
-    fetch(`${REPORT_BASE}/disponibles?dataset=${encodeURIComponent(datasetSeleccionado)}`, {
-      credentials: 'include',
-    })
-      .then(async (res) => {
-        if (!res.ok) throw new Error()
-        const data = await res.json()
-        const lista: { id: string; titulo: string; detalle: string; disponible: boolean; motivo: string }[] =
-          Array.isArray(data.secciones) ? data.secciones : []
+    const cargar = async () => {
+      try {
+        const data = await apiFetch<{ secciones?: { id: string; titulo: string; detalle: string; disponible: boolean; motivo: string }[] }>(
+          `/report/disponibles?dataset=${encodeURIComponent(datasetSeleccionado)}`,
+          { method: 'GET' },
+        )
+        const lista = Array.isArray(data.secciones) ? data.secciones : []
         const mapa: Record<string, Disponibilidad> = {}
         for (const s of lista) {
           mapa[s.id] = { disponible: s.disponible, detalle: s.detalle || s.motivo || '' }
         }
         setDisponibilidad(mapa)
-        setSeleccion(CATALOGO.filter((c) => mapa[c.id]?.disponible).map((c) => c.id))
-        fetch(`${REPORT_BASE}/datos-graficos`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            dataset: datasetSeleccionado,
-            secciones: CATALOGO.filter((c) => mapa[c.id]?.disponible).map((c) => c.id),
-          }),
-        })
-          .then((r) => (r.ok ? r.json() : null))
-          .then((g) => {
-            const mapaSpecs: Record<string, Spec[]> = {}
-            const grupos = g?.graficos && typeof g.graficos === 'object' ? g.graficos : {}
-            for (const [sid, lista] of Object.entries(grupos)) {
-              if (Array.isArray(lista)) mapaSpecs[sid] = lista as Spec[]
-            }
-            setSpecs(mapaSpecs)
-          })
-          .catch(() => setSpecs({}))
-      })
-      .catch(() => {
+        const ids = CATALOGO.filter((c) => mapa[c.id]?.disponible).map((c) => c.id)
+        setSeleccion(ids)
+        try {
+          const g = await apiFetch<{ graficos?: Record<string, Spec[]> }>(
+            `/report/datos-graficos`,
+            {
+              method: 'POST',
+              body: JSON.stringify({ dataset: datasetSeleccionado, secciones: ids }),
+            },
+            { silent: true },
+          )
+          const mapaSpecs: Record<string, Spec[]> = {}
+          const grupos = g?.graficos && typeof g.graficos === 'object' ? g.graficos : {}
+          for (const [sid, items] of Object.entries(grupos)) {
+            if (Array.isArray(items)) mapaSpecs[sid] = items as Spec[]
+          }
+          setSpecs(mapaSpecs)
+        } catch {
+          setSpecs({})
+        }
+      } catch {
         setDisponibilidad({})
         setSeleccion([])
         setErrorMensaje('No se pudo obtener los análisis realizados para este dataset.')
-      })
-      .finally(() => setCargando(false))
+      } finally {
+        setCargando(false)
+      }
+    }
+    cargar()
   }, [datasetSeleccionado])
 
   function toggle(s: string) {
@@ -347,35 +395,22 @@ export function ReportsView() {
   }
 
   async function generar() {
-    if (!datasetSeleccionado || seleccion.length === 0) return
+    if (!datasetSeleccionado || seleccion.length === 0 || !taskKey) return
     setEstado('generando')
     setErrorMensaje(null)
     try {
       const graficos = recolectarSvgs(seleccion)
       const pngs = recolectarPngs(seleccion)
-      const res = await fetch(`${REPORT_BASE}/generar`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dataset: datasetSeleccionado, secciones: seleccion, graficos, pngs }),
+      await startTask({
+        key: taskKey,
+        service: 'report',
+        operation: 'generar',
+        jobType: 'report',
+        dataset: datasetSeleccionado,
+        body: { dataset: datasetSeleccionado, secciones: seleccion, graficos, pngs },
+        successMessage: 'Informe generado correctamente.',
       })
-      if (!res.ok) {
-        const data = await res.json().catch(() => null)
-        const mensaje = typeof data?.detail === 'string' ? data.detail : 'Ocurrió un error al generar el informe.'
-        setErrorMensaje(mensaje)
-        setEstado('idle')
-        return
-      }
-      const blob = await res.blob()
-      if (descargaUrl) URL.revokeObjectURL(descargaUrl)
-      const url = URL.createObjectURL(blob)
-      setDescargaUrl(url)
-      const dispo = res.headers.get('content-disposition') || ''
-      const m = dispo.match(/filename="?([^"]+)"?/)
-      setNombreArchivo(m ? m[1] : `informe_${datasetSeleccionado}.pdf`)
-      setEstado('listo')
     } catch {
-      setErrorMensaje('No se pudo conectar con el servidor. Por favor, inténtelo de nuevo.')
       setEstado('idle')
     }
   }

@@ -5,7 +5,8 @@ import { AnalysisRunner } from '@/components/analysis-runner'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { useEffect, useState } from 'react'
 import { useDataset } from '@/context/dataset-provider'
-import { API_BASE } from '@/lib/api-base'
+import { useJobs } from '@/context/jobs-context'
+import { apiFetch } from '@/lib/api-fetch'
 import { WordCloudInteractive } from '@/components/charts/wordcloud-interactive'
 
 type WordFreq = {
@@ -33,39 +34,59 @@ export function WordCloudView() {
   const [data, setData] = useState<WordCloudResponse | null>(null)
 
   const { datasetSeleccionado } = useDataset()
+  const { tasks, startTask, adoptTask, consumeTask } = useJobs()
+  const taskKey = datasetSeleccionado ? `wordcloud:${datasetSeleccionado}` : null
+  const task = taskKey ? tasks[taskKey] : undefined
 
-  const ejecutarWordCloud = async () => {
+  const ejecutarWordCloud = () => {
+    if (!datasetSeleccionado || !taskKey) return
     setEstado('running')
-    const respuesta = await fetch(API_BASE + '/wordcloud/visualizeWordCloud', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dataset: datasetSeleccionado }),
-    })
-    if (!respuesta.ok) {
-      console.error('Error al generar nube:', respuesta.statusText)
-      setEstado('idle')
-      return
-    }
-    const json: WordCloudResponse = await respuesta.json()
-    setData(json)
-    setEstado('done')
+    startTask({
+      key: taskKey,
+      service: 'wordcloud',
+      operation: 'visualizeWordCloud',
+      jobType: 'wordcloud',
+      dataset: datasetSeleccionado,
+      body: { dataset: datasetSeleccionado },
+      successMessage: 'Nube de palabras generada correctamente.',
+    }).catch(() => setEstado('idle'))
   }
+
+  useEffect(() => {
+    if (!datasetSeleccionado || !taskKey) return
+    adoptTask({
+      key: taskKey,
+      service: 'wordcloud',
+      jobType: 'wordcloud',
+      dataset: datasetSeleccionado,
+      successMessage: 'Nube de palabras generada correctamente.',
+    })
+  }, [datasetSeleccionado])
+
+  useEffect(() => {
+    if (!task || task.consumed) return
+    if (task.status === 'running') {
+      setEstado('running')
+    } else if (task.status === 'succeeded') {
+      setData(task.result as WordCloudResponse)
+      setEstado('done')
+      consumeTask(task.key)
+    } else {
+      setEstado('idle')
+      consumeTask(task.key)
+    }
+  }, [task])
 
   useEffect(() => {
     if (!datasetSeleccionado) return
     const fetchData = async () => {
       try {
         setEstado('running')
-        const respuesta = await fetch(API_BASE + '/wordcloud/getWordCloudImage', {
+        const json = await apiFetch<WordCloudResponse>('/wordcloud/getWordCloudImage', {
           method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ dataset: datasetSeleccionado }),
-        })
-        if (!respuesta.ok) { setEstado('idle'); return }
-        const json: WordCloudResponse = await respuesta.json()
-        if (!json.frequencies) { setEstado('idle'); return }
+        }, { silent: true, ignoreNotFound: true })
+        if (!json?.frequencies) { setEstado('idle'); return }
         setData(json)
         setEstado('done')
       } catch { setEstado('idle') }

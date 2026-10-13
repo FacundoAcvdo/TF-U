@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ShieldAlert, Download, FileCode2, Settings2, Database, TriangleAlert, Info } from 'lucide-react'
 import { AnalysisRunner } from '@/components/analysis-runner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useDataset } from '@/context/dataset-provider'
+import { useJobs } from '@/context/jobs-context'
 import { API_BASE } from '@/lib/api-base'
 
 const VALIDACION_CRUZADA = 'Validación Cruzada'
@@ -88,6 +89,9 @@ export function MentionView() {
   const [bertRapido, setBertRapido] = useState(false)
 
   const { datasetSeleccionado } = useDataset()
+  const { tasks, startTask, adoptTask, consumeTask } = useJobs()
+  const taskKey = datasetSeleccionado ? `classification:${datasetSeleccionado}` : null
+  const task = taskKey ? tasks[taskKey] : undefined
 
   const porcentajeEntrenamiento = porcentajeTrain[0] ?? 50
   const porcentajePrueba = 100 - porcentajeEntrenamiento
@@ -158,36 +162,50 @@ export function MentionView() {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/classification/detectar_menciones`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+      if (!taskKey) return
+      await startTask({
+        key: taskKey,
+        service: 'classification',
+        operation: 'detectar_menciones',
+        jobType: 'classification',
+        dataset: datasetSeleccionado,
+        body,
+        successMessage: 'Modelo entrenado correctamente.',
       })
+    } catch {
+      setEstado('idle')
+    }
+  }
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null)
-        const mensaje = errorData?.detail ?? 'Ocurrió un error al detectar menciones. Por favor, inténtelo de nuevo.'
-        console.warn('Error al detectar menciones:', mensaje)
-        setErrorMensaje(typeof mensaje === 'string' ? mensaje : JSON.stringify(mensaje))
-        setEstado('idle')
-        return
-      }
+  useEffect(() => {
+    if (!datasetSeleccionado || !taskKey) return
+    adoptTask({
+      key: taskKey,
+      service: 'classification',
+      jobType: 'classification',
+      dataset: datasetSeleccionado,
+      successMessage: 'Modelo entrenado correctamente.',
+    })
+  }, [datasetSeleccionado])
 
-      const data = await res.json()
-
+  useEffect(() => {
+    if (!task || task.consumed) return
+    if (task.status === 'running') {
+      setEstado('running')
+    } else if (task.status === 'succeeded') {
+      const data = task.result as { resumen: ResumenMenciones; model_id?: string; nombre_archivo?: string }
       setResultado(data.resumen)
       setModeloDescargaUrl(
         `${API_BASE}/classification/descargar_modelo?model_id=${encodeURIComponent(data.model_id ?? '')}`,
       )
       setNombreArchivo(data.nombre_archivo ?? 'modelo.zip')
       setEstado('done')
-    } catch (error) {
-      console.warn('Error de conexión al detectar menciones:', error)
-      setErrorMensaje('No se pudo conectar con el servidor. Por favor, inténtelo de nuevo.')
+      consumeTask(task.key)
+    } else {
       setEstado('idle')
+      consumeTask(task.key)
     }
-  }
+  }, [task])
 
   const handleDescargar = () => {
     if (!modeloDescargaUrl) return

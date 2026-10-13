@@ -15,7 +15,8 @@ import { AnalysisRunner } from '@/components/analysis-runner'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { useEffect, useState } from 'react'
 import { useDataset } from '@/context/dataset-provider'
-import { API_BASE } from '@/lib/api-base'
+import { useJobs } from '@/context/jobs-context'
+import { apiFetch } from '@/lib/api-fetch'
 import { EmotionCorpusMeanChart } from '@/components/charts/emotion-corpus-mean-chart'
 import { EmotionDistributionChart } from '@/components/charts/emotion-distribution-chart'
 import { EmotionCorrelationHeatmap } from '@/components/charts/emotion-correlation-heatmap'
@@ -57,39 +58,59 @@ export function EmotionsView() {
   const [classMetric, setClassMetric] = useState<'mean' | 'median' | 'std'>('mean')
 
   const { datasetSeleccionado } = useDataset()
+  const { tasks, startTask, adoptTask, consumeTask } = useJobs()
+  const taskKey = datasetSeleccionado ? `emotions:${datasetSeleccionado}` : null
+  const task = taskKey ? tasks[taskKey] : undefined
 
-  const ejecutarEmotions = async () => {
+  const ejecutarEmotions = () => {
+    if (!datasetSeleccionado || !taskKey) return
     setEstado('running')
-    const respuesta = await fetch(API_BASE + '/emotions/analyzeEmotions', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dataset: datasetSeleccionado }),
-    })
-    if (!respuesta.ok) {
-      console.error('Error al analizar emociones:', respuesta.statusText)
-      setEstado('idle')
-      return
-    }
-    const json: EmotionsResponse = await respuesta.json()
-    setData(json)
-    setEstado('done')
+    startTask({
+      key: taskKey,
+      service: 'emotions',
+      operation: 'analyzeEmotions',
+      jobType: 'emotions',
+      dataset: datasetSeleccionado,
+      body: { dataset: datasetSeleccionado },
+      successMessage: 'Emociones analizadas correctamente.',
+    }).catch(() => setEstado('idle'))
   }
+
+  useEffect(() => {
+    if (!datasetSeleccionado || !taskKey) return
+    adoptTask({
+      key: taskKey,
+      service: 'emotions',
+      jobType: 'emotions',
+      dataset: datasetSeleccionado,
+      successMessage: 'Emociones analizadas correctamente.',
+    })
+  }, [datasetSeleccionado])
+
+  useEffect(() => {
+    if (!task || task.consumed) return
+    if (task.status === 'running') {
+      setEstado('running')
+    } else if (task.status === 'succeeded') {
+      setData(task.result as EmotionsResponse)
+      setEstado('done')
+      consumeTask(task.key)
+    } else {
+      setEstado('idle')
+      consumeTask(task.key)
+    }
+  }, [task])
 
   useEffect(() => {
     if (!datasetSeleccionado) return
     const fetchResults = async () => {
       try {
         setEstado('running')
-        const respuesta = await fetch(API_BASE + '/emotions/getResults', {
+        const json = await apiFetch<EmotionsResponse>('/emotions/getResults', {
           method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ dataset: datasetSeleccionado }),
-        })
-        if (!respuesta.ok) { setEstado('idle'); return }
-        const json: EmotionsResponse = await respuesta.json()
-        if (!json.corpus_stats) { setEstado('idle'); return }
+        }, { silent: true, ignoreNotFound: true })
+        if (!json?.corpus_stats) { setEstado('idle'); return }
         setData(json)
         setEstado('done')
       } catch { setEstado('idle') }

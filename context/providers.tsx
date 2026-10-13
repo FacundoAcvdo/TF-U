@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DatasetProvider } from "./dataset-provider";
+import { JobsProvider } from "./jobs-context";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -22,9 +23,11 @@ export function Providers({ children }: ProvidersProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-       <DatasetProvider>
+      <JobsProvider>
+        <DatasetProvider>
             {children}
-       </DatasetProvider>
+        </DatasetProvider>
+      </JobsProvider>
     </QueryClientProvider>
   );
 }
