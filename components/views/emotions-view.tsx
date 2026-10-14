@@ -13,6 +13,7 @@ import {
 import { HeartCrack } from 'lucide-react'
 import { AnalysisRunner } from '@/components/analysis-runner'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { useEffect, useState } from 'react'
 import { useDataset } from '@/context/dataset-provider'
 import { useJobs } from '@/context/jobs-context'
@@ -28,6 +29,15 @@ type ClassStats = Array<{ clase: string; count: number } & Record<string, { coun
 type Correlation = { matrix: number[][]; order: string[]; flat: { x: string; y: string; value: number }[] }
 type Distribution = Array<{ emotion: string; stats: { count: number; mean: number; std: number; min: number; max: number; median: number; q25: number; q75: number }; histogram: { bin_start: number; bin_end: number; count: number }[] }>
 
+type CalidadAnalisis = {
+  n_textos: number
+  neutral_rate: number
+  low_confidence_rate: number
+  dominant_counts: Record<string, number>
+  n_es: number
+  n_en: number
+}
+
 type EmotionsResponse = {
   dataset_id: string
   emotions: string[]
@@ -37,6 +47,7 @@ type EmotionsResponse = {
   distribution: Distribution
   top_words: Record<string, string[]>
   class_top_words: Record<string, Record<string, string[]>>
+  calidad?: CalidadAnalisis | null
 }
 
 const classViews = [
@@ -133,7 +144,20 @@ export function EmotionsView() {
             <div className="flex flex-row items-start justify-between gap-4">
               <div className="flex flex-col gap-1">
                 <h3 className="text-sm font-semibold tracking-tight">Emociones — corpus</h3>
-                <p className="text-xs text-muted-foreground">6 emociones · transformer multilingüe (es/en)</p>
+                <p className="text-xs text-muted-foreground">6 emociones · modelos ES + EN según idioma</p>
+                {data?.calidad && (
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    <Badge variant="secondary" className="text-xs">
+                      Neutral: {(data.calidad.neutral_rate * 100).toFixed(1)}%
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      Baja confianza: {(data.calidad.low_confidence_rate * 100).toFixed(1)}%
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      ES {data.calidad.n_es} · EN {data.calidad.n_en}
+                    </Badge>
+                  </div>
+                )}
               </div>
               <Select value={corpusView} onValueChange={(v) => setCorpusView(v as any)}>
                 <SelectTrigger size="sm" className="w-36 bg-card">

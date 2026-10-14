@@ -391,35 +391,22 @@ export function ReportsView() {
   }
 
   async function generar() {
-    if (!datasetSeleccionado || seleccion.length === 0) return
+    if (!datasetSeleccionado || seleccion.length === 0 || !taskKey) return
     setEstado('generando')
     setErrorMensaje(null)
     try {
       const graficos = recolectarSvgs(seleccion)
       const pngs = recolectarPngs(seleccion)
-      const res = await fetch(`${API_BASE}/report/generar`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dataset: datasetSeleccionado, secciones: seleccion, graficos, pngs }),
+      await startTask({
+        key: taskKey,
+        service: 'report',
+        operation: 'generar',
+        jobType: 'report',
+        dataset: datasetSeleccionado,
+        body: { dataset: datasetSeleccionado, secciones: seleccion, graficos, pngs },
+        successMessage: 'Informe generado correctamente.',
       })
-      if (!res.ok) {
-        const data = await res.json().catch(() => null)
-        const mensaje = typeof data?.detail === 'string' ? data.detail : 'Ocurrió un error al generar el informe.'
-        setErrorMensaje(mensaje)
-        setEstado('idle')
-        return
-      }
-      const blob = await res.blob()
-      if (descargaUrl) URL.revokeObjectURL(descargaUrl)
-      const url = URL.createObjectURL(blob)
-      setDescargaUrl(url)
-      const dispo = res.headers.get('content-disposition') || ''
-      const m = dispo.match(/filename="?([^"]+)"?/)
-      setNombreArchivo(m ? m[1] : `informe_${datasetSeleccionado}.pdf`)
-      setEstado('listo')
     } catch {
-      setErrorMensaje('No se pudo conectar con el servidor. Por favor, inténtelo de nuevo.')
       setEstado('idle')
     }
   }
