@@ -17,6 +17,7 @@ import {
 import { useDataset } from '@/context/dataset-provider'
 import { useJobs } from '@/context/jobs-context'
 import { API_BASE } from '@/lib/api-base'
+import { Checkbox } from '@/components/ui/checkbox'
 
 const VALIDACION_CRUZADA = 'Validación Cruzada'
 const ENTRENAMIENTO_PRUEBA = 'Entrenamiento y Prueba'
@@ -42,8 +43,6 @@ const RF_LEAF_OPS = ['1', '2']
 const NB_SMOOTH_OPS = ['1e-9', '1e-8', '1e-7']
 
 type Modelo = (typeof modelos)[number]
-
-const MODELOS_SIN_VALIDACION_CRUZADA: Modelo[] = ['BERT']
 
 function formatearPorcentaje(valor: number): string {
   const truncado = Math.trunc(valor * 100 * 100) / 100
@@ -96,16 +95,12 @@ export function MentionView() {
   const porcentajeEntrenamiento = porcentajeTrain[0] ?? 50
   const porcentajePrueba = 100 - porcentajeEntrenamiento
 
-  const soportaValidacionCruzada = !MODELOS_SIN_VALIDACION_CRUZADA.includes(modeloSeleccionado)
+  const soportaValidacionCruzada = true
   const esBert = modeloSeleccionado === 'BERT'
 
   const handleModeloChange = (val: string) => {
     const nuevoModelo = (val as Modelo) ?? modelos[0]
     setModeloSeleccionado(nuevoModelo)
-
-    if (MODELOS_SIN_VALIDACION_CRUZADA.includes(nuevoModelo) && metodoDeEntrenamiento === VALIDACION_CRUZADA) {
-      setMetodoDeEntrenamiento(ENTRENAMIENTO_PRUEBA)
-    }
   }
 
   const handleReset = () => {
@@ -292,7 +287,6 @@ export function MentionView() {
                         <SelectItem
                           key={item}
                           value={item}
-                          disabled={item === VALIDACION_CRUZADA && !soportaValidacionCruzada}
                         >
                           {item}
                         </SelectItem>
@@ -353,9 +347,9 @@ export function MentionView() {
               <div className="flex items-start gap-2.5 rounded-lg border bg-muted/30 px-3.5 py-2.5 text-xs text-muted-foreground">
                 <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                 <span>
-                  BERT reentrena la red completa sobre los textos del dataset. Solo admite
-                  división en entrenamiento y prueba, puede tardar varios minutos y el archivo
-                  resultante pesa cientos de megabytes.
+                  BERT reentrena la red completa sobre los textos del dataset. Puede demorar
+                  bastante tiempo (más aún con validación cruzada) y el archivo resultante
+                  pesa cientos de megabytes.
                 </span>
               </div>
             )}
@@ -363,11 +357,9 @@ export function MentionView() {
             {!resultado && (
               <div className="flex flex-col gap-3 rounded-lg border px-3.5 py-3">
                 <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={modificarParams}
-                    onChange={(e) => setModificarParams(e.target.checked)}
-                    className="h-4 w-4"
+                    onCheckedChange={(v) => setModificarParams(v === true)}
                   />
                   Modificar parámetros
                 </label>
@@ -378,19 +370,16 @@ export function MentionView() {
                       <Select value={bertModelo} onValueChange={(v) => setBertModelo(v ?? 'auto')}>
                         <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                         <SelectContent><SelectGroup>
-                          <SelectItem value="auto">Auto (por idioma)</SelectItem>
-                          <SelectItem value="es">Español (Distil)</SelectItem>
-                          <SelectItem value="en">Inglés (Distil)</SelectItem>
-                          <SelectItem value="es_base">Español grande (lento)</SelectItem>
+                          <SelectItem value="auto">Auto (por idioma y equipo)</SelectItem>
+                          <SelectItem value="es_base">Español grande</SelectItem>
+                          <SelectItem value="en_mental">Inglés mental</SelectItem>
                         </SelectGroup></SelectContent>
                       </Select>
                     </div>
                     <label className="flex items-center gap-2 text-xs cursor-pointer">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={bertRapido}
-                        onChange={(e) => setBertRapido(e.target.checked)}
-                        className="h-4 w-4"
+                        onCheckedChange={(v) => setBertRapido(v === true)}
                       />
                       Modo rápido (solo capa final, mucho más veloz)
                     </label>
