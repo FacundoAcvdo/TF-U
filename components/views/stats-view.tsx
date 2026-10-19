@@ -126,7 +126,7 @@ export function StatsView() {
     <AnalysisRunner
       icon={ChartColumn}
       runLabel="Calcular estadísticas"
-      idleHint="Genera el resumen descriptivo del dataset cargado."
+      idleHint="Genera un panorama general de los textos cargados: cuántos documentos hay, cuántas palabras y oraciones contienen y cuántas palabras distintas aparecen. Sirve como primer diagnóstico para saber con qué datos trabajás y para comparar entre grupos antes de análisis más específicos."
       ejecutarFuncion={ejecutarEda}
       estado={estado}
     >
@@ -143,11 +143,11 @@ export function StatsView() {
                   <TableHead className="text-right text-base">Textos</TableHead>
                   <TableHead className="text-right text-base">Vocabulario</TableHead>
                   <TableHead className="text-right text-base">Palabras</TableHead>
-                  <TableHead className="text-right text-base">Palabras avg</TableHead>
+                  <TableHead className="text-right text-base">Palabras prom.</TableHead>
                   <TableHead className="text-right text-base">Oraciones</TableHead>
-                  <TableHead className="text-right text-base">Oraciones avg</TableHead>
-                  <TableHead className="text-right text-base">Oraciones min</TableHead>
-                  <TableHead className="text-right text-base">Oraciones max</TableHead>
+                  <TableHead className="text-right text-base">Oraciones prom.</TableHead>
+                  <TableHead className="text-right text-base">Oraciones mín</TableHead>
+                  <TableHead className="text-right text-base">Oraciones máx</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -171,11 +171,11 @@ export function StatsView() {
                   <TableHead className="text-left text-base">Textos</TableHead>
                   <TableHead className="text-right text-base">Vocabulario</TableHead>
                   <TableHead className="text-right text-base">Palabras</TableHead>
-                  <TableHead className="text-right text-base">Palabras avg</TableHead>
+                  <TableHead className="text-right text-base">Palabras prom.</TableHead>
                   <TableHead className="text-right text-base">Oraciones</TableHead>
-                  <TableHead className="text-right text-base">Oraciones avg</TableHead>
-                  <TableHead className="text-right text-base">Oraciones min</TableHead>
-                  <TableHead className="text-right text-base">Oraciones max</TableHead>
+                  <TableHead className="text-right text-base">Oraciones prom.</TableHead>
+                  <TableHead className="text-right text-base">Oraciones mín</TableHead>
+                  <TableHead className="text-right text-base">Oraciones máx</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -201,7 +201,7 @@ export function StatsView() {
           <Card>
             <CardHeader className="pb-3">
               <h3 className="text-sm font-semibold tracking-tight">Distribución de oraciones</h3>
-              <p className="text-xs text-muted-foreground">Boxplot + histograma — hover para detalles</p>
+              <p className="text-xs text-muted-foreground">Diagrama de caja + histograma — al pasar el cursor para detalles</p>
             </CardHeader>
             <CardContent className="pt-0 flex flex-col gap-4">
               <EdaSentenceBoxPlot stats={sentenceStats} />

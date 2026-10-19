@@ -1,8 +1,9 @@
 'use client'
 
+import Image from 'next/image'
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Activity, Lock, Mail, LoaderCircle } from 'lucide-react'
+import { Lock, Mail, LoaderCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 function LoginInner() {
@@ -54,19 +55,18 @@ function LoginInner() {
       {/* Panel de marca */}
       <section className="flex flex-1 flex-col justify-between gap-10 p-8 lg:p-14">
         <div className="flex items-center gap-2.5">
-          <span className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-            <Activity className="size-5" />
-          </span>
-          <span className="text-sm font-semibold tracking-tight">TFU</span>
+          <Image src="/logo.png" alt="PLASMA" width={36} height={36} className="size-9" priority />
+          <span className="text-sm font-semibold tracking-tight">PLASMA</span>
         </div>
 
         <div className="flex max-w-md flex-col gap-4">
           <h1 className="text-3xl font-semibold leading-tight tracking-tight text-balance lg:text-4xl">
-            Plataforma de análisis de datos sobre el suicidio
+            Plataforma de Lenguaje y Análisis de Salud Mental Automatizado
           </h1>
           <p className="text-sm leading-relaxed text-sidebar-foreground/70 text-pretty">
             Herramienta de investigación para explorar patrones lingüísticos, emociones y niveles de
-            riesgo en corpus textuales, con el objetivo de apoyar tareas de prevención e investigación.
+            riesgo en corpus textuales. Está pensada para el ámbito de la salud mental —con foco en la
+            prevención— y también para el análisis general de lenguaje.
           </p>
         </div>
 

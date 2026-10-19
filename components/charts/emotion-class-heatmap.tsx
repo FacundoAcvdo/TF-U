@@ -1,9 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+import { etiquetaEmocion } from '@/lib/emotions'
 
 type ClassStat = { clase: string; count: number; [emo: string]: any }
 type Props = { classStats: ClassStat[]; emotions: string[]; metric: 'mean' | 'std' | 'median' }
+
+const ETIQUETA_METRICA: Record<Props['metric'], string> = {
+  mean: 'Media',
+  median: 'Mediana',
+  std: 'Desv. est.',
+}
 
 export function EmotionClassHeatmap({ classStats, emotions, metric }: Props) {
   const [hover, setHover] = useState<{ clase: string; emo: string; v: number; x: number; y: number } | null>(null)
@@ -27,8 +34,8 @@ export function EmotionClassHeatmap({ classStats, emotions, metric }: Props) {
         <div className="grid gap-px bg-border/60 p-px rounded-md overflow-hidden" style={{ gridTemplateColumns: `112px repeat(${emoOrder.length}, minmax(0, 1fr))` }}>
           <div className="bg-muted/30 px-2 py-1.5 text-[11px] font-medium text-muted-foreground">clase</div>
           {emoOrder.map(emo => (
-            <div key={emo} className="bg-muted/30 px-1 py-1.5 text-center text-[11px] font-medium capitalize text-muted-foreground truncate" title={emo}>
-              {emo}
+            <div key={emo} className="bg-muted/30 px-1 py-1.5 text-center text-[11px] font-medium capitalize text-muted-foreground truncate" title={etiquetaEmocion(emo)}>
+              {etiquetaEmocion(emo)}
             </div>
           ))}
           {classStats.map(row => (
@@ -65,19 +72,19 @@ export function EmotionClassHeatmap({ classStats, emotions, metric }: Props) {
             <div className="flex-1" style={{ background: 'var(--primary)' }} />
           </div>
           <span className="font-mono text-[11px] text-muted-foreground">{max.toFixed(3)}</span>
-          <span className="ml-2 text-[11px] text-muted-foreground">{metric}</span>
+          <span className="ml-2 text-[11px] text-muted-foreground">{ETIQUETA_METRICA[metric]}</span>
         </div>
       </div>
       {hover && (
         <div className="pointer-events-none fixed z-50 max-w-[260px] rounded-md border bg-popover px-3 py-2 text-xs shadow-sm" style={{ left: hover.x + 10, top: hover.y + 10 }}>
-          <p className="font-medium text-foreground">{hover.clase} <span className="font-normal text-muted-foreground">·</span> <span className="capitalize">{hover.emo}</span></p>
-          <p className="font-mono text-muted-foreground">{metric} <span className="text-foreground">{hover.v.toFixed(4)}</span></p>
+          <p className="font-medium text-foreground">{hover.clase} <span className="font-normal text-muted-foreground">·</span> <span className="capitalize">{etiquetaEmocion(hover.emo)}</span></p>
+          <p className="font-mono text-muted-foreground">{ETIQUETA_METRICA[metric]} <span className="text-foreground">{hover.v.toFixed(4)}</span></p>
           {(() => {
             const row = classStats.find(r => r.clase === hover.clase)
             const words: string[] = row?.[hover.emo]?.top_words || []
             return words.length ? (
               <p className="mt-1 border-t pt-1 font-mono text-[11px] text-muted-foreground">
-                top: <span className="text-foreground">{words.slice(0, 3).join(' · ')}</span>
+                más frecuentes: <span className="text-foreground">{words.slice(0, 3).join(' · ')}</span>
               </p>
             ) : null
           })()}

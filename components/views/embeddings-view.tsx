@@ -88,7 +88,7 @@ export function EmbeddingsView() {
     <AnalysisRunner
       icon={Sparkles}
       runLabel="Calcular embeddings"
-      idleHint="Genera la representación vectorial de cada mensaje y proyéctala en 2D para observar agrupamientos semánticos."
+      idleHint="Convierte cada mensaje en una representación numérica de su significado y lo ubica en un mapa 2D. Los textos parecidos quedan cerca: sirve para descubrir temas recurrentes y ver de un vistazo cómo se agrupa el contenido del dataset."
       estado={estado}
       ejecutarFuncion={ejecutarEmbeddings}
     >
@@ -96,7 +96,7 @@ export function EmbeddingsView() {
         <CardHeader className="pb-3">
           <div className="flex flex-col gap-1">
             <h3 className="text-sm font-semibold tracking-tight">Proyección 2D — UMAP</h3>
-            <p className="text-xs text-muted-foreground">cosine · 2 componentes · HDBSCAN interactivo</p>
+            <p className="text-xs text-muted-foreground">coseno · 2 componentes · HDBSCAN interactivo</p>
           </div>
         </CardHeader>
         <CardContent className="pt-0">

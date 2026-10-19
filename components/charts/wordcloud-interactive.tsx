@@ -118,7 +118,7 @@ export function WordCloudInteractive({ frequencies, total_words, max_count }: Pr
         <span className="text-xs text-muted-foreground">
           {placed.length} / {frequencies.length} visibles
         </span>
-        <span className="ml-auto hidden text-[11px] text-muted-foreground sm:inline">centro = más frecuente · sin rotación · hover para stats</span>
+        <span className="ml-auto hidden text-[11px] text-muted-foreground sm:inline">centro = más frecuente · sin rotación · al pasar el cursor para estadísticas</span>
       </div>
 
       <div ref={containerRef} className="relative overflow-hidden rounded-lg border bg-card" style={{ height: 520 }}>
@@ -152,8 +152,8 @@ export function WordCloudInteractive({ frequencies, total_words, max_count }: Pr
       </div>
 
       <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
-        <span>{total_words.toLocaleString()} palabras · {frequencies.length} únicas (top 200)</span>
-        <span className="font-mono">max {max_count} · visibles {placed.length}</span>
+        <span>{total_words.toLocaleString()} palabras · {frequencies.length} únicas (200 principales)</span>
+        <span className="font-mono">máx {max_count} · visibles {placed.length}</span>
       </div>
 
       {hover && (
@@ -168,10 +168,10 @@ export function WordCloudInteractive({ frequencies, total_words, max_count }: Pr
               <span className="text-[11px]">({hover.w.percentage}% del corpus)</span>
             </p>
             <p>
-              en <span className="font-medium text-foreground">{hover.w.doc_frequency}</span> docs{' '}
+              en <span className="font-medium text-foreground">{hover.w.doc_frequency}</span> documentos{' '}
               <span className="text-[11px]">({hover.w.doc_percentage}%)</span>
             </p>
-            <p className="text-[11px]">rank #{hover.w.rank}</p>
+            <p className="text-[11px]">puesto #{hover.w.rank}</p>
           </div>
         </div>
       )}

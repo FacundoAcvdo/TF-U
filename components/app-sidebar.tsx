@@ -1,9 +1,10 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Activity, LogOut } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import { navGroups } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
 
@@ -40,12 +41,17 @@ export function AppSidebar({
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex items-center gap-2.5 px-5 py-5">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-          <Activity className="size-4" />
-        </span>
+        <Image
+          src="/logo.png"
+          alt="PLASMA"
+          width={32}
+          height={32}
+          className="size-8 shrink-0"
+          priority
+        />
         <div className="flex min-w-0 flex-col">
-          <span className="truncate text-sm font-semibold leading-tight">TFU</span>
-          <span className="truncate text-xs text-sidebar-foreground/60">Análisis de datos</span>
+          <span className="truncate text-sm font-semibold leading-tight">PLASMA</span>
+          <span className="truncate text-xs text-sidebar-foreground/60">Salud mental</span>
         </div>
       </div>
 

@@ -208,7 +208,7 @@ export function EmbeddingsScatter({ points, clusters, outliers, total, truncated
               onClick={() => setShowOutliers(v => !v)}
               className={`rounded-full border px-2.5 py-1 text-xs ${showOutliers ? 'bg-card text-foreground' : 'bg-muted text-muted-foreground line-through'}`}
             >
-              outliers {outliers}
+              atípicos {outliers}
             </button>
           )}
         </div>
@@ -234,7 +234,7 @@ export function EmbeddingsScatter({ points, clusters, outliers, total, truncated
           </div>
         </div>
         <div className="flex items-center justify-between border-t bg-card px-3 py-2 text-[11px] text-muted-foreground">
-          <span>UMAP 2D · cosine · HDBSCAN min 50 · canvas</span>
+          <span>UMAP 2D · coseno · HDBSCAN mín 50 · canvas</span>
           <span className="font-mono">
             {filtered.length} / {total} puntos {truncated ? '· muestreo 8k' : ''}
           </span>
@@ -247,14 +247,14 @@ export function EmbeddingsScatter({ points, clusters, outliers, total, truncated
           style={{ left: hover.cx + 10, top: hover.cy + 10 }}
         >
           <p className="font-medium text-foreground">
-            {hover.p.cluster === '-1' ? 'outlier' : `cluster ${hover.p.cluster}`}
+            {hover.p.cluster === '-1' ? 'atípico' : `cluster ${hover.p.cluster}`}
           </p>
           <p className="font-mono text-muted-foreground">
             x {hover.p.x.toFixed(3)} · y {hover.p.y.toFixed(3)}
           </p>
         </div>
       )}
-      <p className="mt-2 text-center text-[11px] text-muted-foreground">hover para coordenadas · click en leyenda para filtrar · ± zoom</p>
+      <p className="mt-2 text-center text-[11px] text-muted-foreground">al pasar el cursor para coordenadas · clic en leyenda para filtrar · ± zoom</p>
     </div>
   )
 }

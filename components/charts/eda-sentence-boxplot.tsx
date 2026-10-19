@@ -17,7 +17,7 @@ export function EdaSentenceBoxPlot({ stats }: Props) {
   return (
     <div className="w-full rounded-lg border bg-card p-4">
       <div className="mb-2 flex items-center justify-between">
-        <h4 className="text-xs font-medium text-muted-foreground">Distribución de oraciones por texto (boxplot)</h4>
+        <h4 className="text-xs font-medium text-muted-foreground">Distribución de oraciones por texto (diagrama de caja)</h4>
         <span className="font-mono text-xs text-muted-foreground">n {count}</span>
       </div>
       <div className="relative h-10 w-full">
@@ -28,11 +28,11 @@ export function EdaSentenceBoxPlot({ stats }: Props) {
         <div className="absolute top-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rotate-45 border bg-card" style={{ left: `${meanPct}%`, borderColor: 'var(--foreground)' }} />
       </div>
       <div className="mt-1 flex justify-between font-mono text-[11px] text-muted-foreground">
-        <span>min {min}</span>
+        <span>mín {min}</span>
         <span>q25 {q25.toFixed(1)}</span>
-        <span className="font-medium text-foreground">med {median}</span>
+        <span className="font-medium text-foreground">mediana {median}</span>
         <span>q75 {q75.toFixed(1)}</span>
-        <span>max {max}</span>
+        <span>máx {max}</span>
         <span>μ {mean.toFixed(1)} ±{std.toFixed(1)}</span>
       </div>
     </div>

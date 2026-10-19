@@ -382,8 +382,8 @@ export function WordEvolutionView() {
               runLabel="Ver evolución de palabras"
               idleHint={
                 remitenteSeleccionado
-                  ? `Analiza los mensajes de ${remitenteSeleccionado} y arma una línea de tiempo con sus palabras más usadas por período.`
-                  : 'Seleccioná un participante para ver la evolución de sus palabras más usadas a lo largo del tiempo.'
+                  ? `Analiza los mensajes de ${remitenteSeleccionado} y arma una línea de tiempo con sus palabras más usadas en cada período. Sirve para ver cómo cambia su vocabulario con el tiempo y detectar cambios de tema o de estado de ánimo.`
+                  : 'Seleccioná un participante para ver cómo cambian sus palabras más usadas a lo largo del tiempo y detectar cambios de tema o de estado de ánimo.'
               }
               estado={estado}
               ejecutarFuncion={ejecutarEvolucion}

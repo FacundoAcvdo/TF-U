@@ -11,9 +11,9 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Análisis de Datos sobre Suicidio | Plataforma de Investigación',
+  title: 'PLASMA | Plataforma de Lenguaje y Análisis de Salud Mental Automatizado',
   description:
-    'Plataforma de investigación para el análisis de datos textuales relacionados con la prevención del suicidio: emociones, tópicos, riesgo y más.'
+    'Plataforma de Lenguaje y Análisis de Salud Mental Automatizado: análisis de corpus textuales para explorar patrones lingüísticos, emociones, tópicos y niveles de riesgo, con foco en la prevención en salud mental.'
 }
 
 export const viewport: Viewport = {

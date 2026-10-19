@@ -372,7 +372,7 @@ export function MentionView() {
                         <SelectContent><SelectGroup>
                           <SelectItem value="auto">Auto (por idioma y equipo)</SelectItem>
                           <SelectItem value="es_base">Español grande</SelectItem>
-                          <SelectItem value="en_mental">Inglés mental</SelectItem>
+                          <SelectItem value="en">Inglés</SelectItem>
                         </SelectGroup></SelectContent>
                       </Select>
                     </div>
@@ -397,7 +397,7 @@ export function MentionView() {
                       </Select>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs text-muted-foreground">max_iter</label>
+                      <label className="text-xs text-muted-foreground">Iteraciones máximas</label>
                       <Select value={iterLogreg} onValueChange={(v) => setIterLogreg(v ?? '1000')}>
                         <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                         <SelectContent><SelectGroup>
@@ -419,7 +419,7 @@ export function MentionView() {
                       </Select>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs text-muted-foreground">max_iter</label>
+                      <label className="text-xs text-muted-foreground">Iteraciones máximas</label>
                       <Select value={iterSvm} onValueChange={(v) => setIterSvm(v ?? '3000')}>
                         <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                         <SelectContent><SelectGroup>
@@ -432,7 +432,7 @@ export function MentionView() {
                 {modificarParams && modeloSeleccionado === 'Random Forest' && (
                   <div className="grid grid-cols-3 gap-3">
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs text-muted-foreground">n_estimators</label>
+                      <label className="text-xs text-muted-foreground">Cantidad de árboles</label>
                       <Select value={nEst} onValueChange={(v) => setNEst(v ?? '100')}>
                         <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                         <SelectContent><SelectGroup>
@@ -441,7 +441,7 @@ export function MentionView() {
                       </Select>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs text-muted-foreground">max_depth</label>
+                      <label className="text-xs text-muted-foreground">Profundidad máxima</label>
                       <Select value={maxDepth} onValueChange={(v) => setMaxDepth(v ?? 'auto')}>
                         <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                         <SelectContent><SelectGroup>
@@ -450,7 +450,7 @@ export function MentionView() {
                       </Select>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs text-muted-foreground">min_samples_leaf</label>
+                      <label className="text-xs text-muted-foreground">Mínimo de muestras por hoja</label>
                       <Select value={minLeaf} onValueChange={(v) => setMinLeaf(v ?? '1')}>
                         <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                         <SelectContent><SelectGroup>
@@ -462,7 +462,7 @@ export function MentionView() {
                 )}
                 {modificarParams && modeloSeleccionado === 'Naive Bayes' && (
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-muted-foreground">var_smoothing</label>
+                    <label className="text-xs text-muted-foreground">Suavizado de varianza</label>
                     <Select value={varSmooth} onValueChange={(v) => setVarSmooth(v ?? '1e-9')}>
                       <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                       <SelectContent><SelectGroup>
@@ -479,8 +479,8 @@ export function MentionView() {
         {!resultado ? (
           <AnalysisRunner
             icon={ShieldAlert}
-            runLabel="Detectar menciones"
-            idleHint="Entrena un clasificador con tu dataset, evalúa su matriz de confusión y descarga el modelo resultante."
+            runLabel="Construir modelo"
+            idleHint="Entrena un modelo que aprende, a partir de tus datos ya clasificados, a reconocer los mensajes que podrían indicar mención o ideación suicida. Muestra qué tan bien distingue una clase de la otra y permite descargar el modelo para reutilizarlo. Necesita un dataset clasificado para poder entrenarse."
             estado={estado}
             ejecutarFuncion={ejecutarDeteccion}
           >
@@ -508,19 +508,19 @@ export function MentionView() {
             <CardContent className="flex flex-col items-center gap-6 py-5">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full text-center">
                 <div className="p-2.5 rounded-lg bg-muted/20 border text-xs">
-                  <span className="text-muted-foreground block text-[11px]">Total Dataset</span>
+                  <span className="text-muted-foreground block text-[11px]">Total del dataset</span>
                   <strong className="text-foreground text-sm">
                     {resultado.total_muestras.toLocaleString()}
                   </strong>
                 </div>
                 <div className="p-2.5 rounded-lg bg-muted/20 border text-xs">
-                  <span className="text-muted-foreground block text-[11px]">Set Entrenamiento</span>
+                  <span className="text-muted-foreground block text-[11px]">Conjunto de entrenamiento</span>
                   <strong className="text-foreground text-sm">
                     {resultado.muestras_train.toLocaleString()}
                   </strong>
                 </div>
                 <div className="p-2.5 rounded-lg bg-muted/20 border text-xs">
-                  <span className="text-muted-foreground block text-[11px]">Set Prueba / Validación</span>
+                  <span className="text-muted-foreground block text-[11px]">Conjunto de prueba / validación</span>
                   <strong className="text-foreground text-sm">
                     {resultado.muestras_test.toLocaleString()}
                   </strong>
@@ -535,7 +535,7 @@ export function MentionView() {
                   <table className="text-xs text-center border-collapse">
                     <thead>
                       <tr>
-                        <th className="p-2 border-b border-r bg-muted/20 text-muted-foreground font-semibold">Real \ Pred</th>
+                        <th className="p-2 border-b border-r bg-muted/20 text-muted-foreground font-semibold">Real \ Predicha</th>
                         {resultado.clases.map((c, idx) => (
                           <th key={idx} className="p-2 border-b border-r bg-muted/20 font-medium text-foreground max-w-[100px] truncate px-3" title={c}>
                             {c}
@@ -581,7 +581,7 @@ export function MentionView() {
                   </span>
                 </div>
                 <div className="flex flex-col items-center gap-0.5 px-3.5 py-2 rounded-lg border bg-muted/30 text-xs text-muted-foreground text-center">
-                  <span>F1-Score</span>
+                  <span>F1 Score</span>
                   <span className="font-semibold text-foreground text-sm">
                     {formatearPorcentaje(resultado.f1_score)}
                   </span>

@@ -191,8 +191,11 @@ export function CleaningView() {
             </h1>
 
             <p className="text-sm text-muted-foreground">
-              Configura las operaciones que quieres aplicar antes
-              del procesamiento del dataset.
+              Prepara tus textos antes de analizarlos quitando el ruido que
+              suele afectar los resultados, como mayúsculas mezcladas, enlaces,
+              menciones, puntuación o palabras muy comunes. Elegí las
+              operaciones que necesites: la plataforma se encarga del orden y
+              así mejoran los análisis posteriores.
             </p>
           </div>
         </div>

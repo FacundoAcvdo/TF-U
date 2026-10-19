@@ -1,6 +1,7 @@
 'use client'
 
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { etiquetaEmocion } from '@/lib/emotions'
 
 type CorpusStats = Record<string, { mean: number; std: number; min: number; max: number; median: number; q25: number; q75: number; count: number }>
 
@@ -11,7 +12,7 @@ function MinimalTooltip({ active, payload }: any) {
   const p = payload[0].payload
   return (
     <div className="rounded-md border bg-popover px-2.5 py-2 text-xs shadow-sm">
-      <p className="font-medium capitalize text-foreground">{p.emotion}</p>
+      <p className="font-medium capitalize text-foreground">{etiquetaEmocion(p.emotion)}</p>
       <div className="mt-1 space-y-0.5 text-muted-foreground">
         <p>media <span className="font-mono font-medium text-foreground">{p.mean.toFixed(3)}</span> <span className="font-mono">±{p.std.toFixed(3)}</span></p>
         <p>mediana <span className="font-mono text-foreground">{p.median.toFixed(3)}</span> · n {p.count}</p>
@@ -56,13 +57,14 @@ export function EmotionCorpusMeanChart({ corpusStats }: Props) {
               tick={{ fontSize: 12, fill: 'var(--foreground)' }}
               axisLine={false}
               tickLine={false}
+              tickFormatter={(v: string) => etiquetaEmocion(v)}
             />
             <Tooltip content={<MinimalTooltip />} cursor={{ fill: 'var(--muted)', opacity: 0.25 }} />
             <Bar dataKey="mean" radius={[4, 4, 4, 4]} barSize={10} fill="var(--chart-1)" fillOpacity={0.9} />
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <p className="mt-2 text-center text-[11px] text-muted-foreground">ordenado por media descendente · hover para std y mediana</p>
+      <p className="mt-2 text-center text-[11px] text-muted-foreground">ordenado por media descendente · al pasar el cursor: desv. est. y mediana</p>
     </div>
   )
 }

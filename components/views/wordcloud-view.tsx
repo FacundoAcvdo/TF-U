@@ -98,7 +98,7 @@ export function WordCloudView() {
     <AnalysisRunner
       icon={Cloud}
       runLabel="Generar nube de palabras"
-      idleHint="Extrae los términos más frecuentes del dataset (sin stopwords, min 3 letras) y visualízalos de forma interactiva."
+      idleHint="Muestra de forma visual las palabras que más se repiten en el conjunto de textos: cuanto más frecuente es una palabra, más grande se ve. Es una forma rápida de reconocer qué conceptos dominan, ideal para una primera exploración o para ilustrar resultados."
       estado={estado}
       ejecutarFuncion={ejecutarWordCloud}
     >
@@ -107,7 +107,7 @@ export function WordCloudView() {
           <div className="flex flex-col gap-1">
             <h3 className="text-sm font-semibold tracking-tight">Nube de palabras</h3>
             <p className="text-xs text-muted-foreground">
-              {data ? `${data.documents_processed} docs · ${data.total_words.toLocaleString()} palabras · top ${data.frequencies.length}` : 'top 200 términos'}
+              {data ? `${data.documents_processed} documentos · ${data.total_words.toLocaleString()} palabras · ${data.frequencies.length} principales` : '200 términos principales'}
             </p>
           </div>
         </CardHeader>
