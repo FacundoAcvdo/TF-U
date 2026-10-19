@@ -127,7 +127,7 @@ export function ChatHistoryView() {
                   {chat.dataset_id ? <Database className="size-4" /> : <MessageCircle className="size-4" />}
                 </span>
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="truncate text-sm font-medium">{chat.titulo}</span>
+                  <span className="truncate text-sm font-medium">{chat.titulo?.trim() ? chat.titulo : 'Sin título'}</span>
                   <span className="text-xs text-muted-foreground">
                     Fecha creación: {chat.fecha_creacion}
                   </span>
@@ -137,7 +137,7 @@ export function ChatHistoryView() {
                   variant="ghost"
                   size="icon-sm"
                   onClick={(e) => { e.stopPropagation(); setPorEliminar(chat) }}
-                  aria-label={`Eliminar chat ${chat.titulo}`}
+                  aria-label={`Eliminar chat ${chat.titulo?.trim() ? chat.titulo : 'Sin título'}`}
                   className="text-muted-foreground hover:text-destructive"
                 >
                   <Trash2 />
@@ -154,7 +154,7 @@ export function ChatHistoryView() {
             <CardHeader>
               <CardTitle>Eliminar chat</CardTitle>
               <CardDescription>
-                {`¿Seguro que quieres eliminar "${porEliminar.titulo || 'Sin título'}"? Esta acción no se puede deshacer.`}
+                {`¿Seguro que quieres eliminar "${porEliminar.titulo?.trim() ? porEliminar.titulo : 'Sin título'}"? Esta acción no se puede deshacer.`}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex justify-end gap-2">
