@@ -204,7 +204,7 @@ export function RiskView() {
     <AnalysisRunner
       icon={Gauge}
       runLabel="Estimar nivel de riesgo"
-      idleHint="Aplica la cabeza E5-large + LogReg sobre los embeddings y verifica con RoBERTa los casos altos en inglés."
+      idleHint="Estima el nivel de riesgo suicida de los textos combinando el contenido de los mensajes con un modelo entrenado para esa tarea y revisando con más detalle los casos más preocupantes. Sirve para priorizar qué mensajes conviene mirar primero, como apoyo a la evaluación de un profesional y no como reemplazo."
       estado={estado}
       ejecutarFuncion={ejecutarRiesgo}
     >
@@ -241,7 +241,7 @@ export function RiskView() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Score medio</CardDescription>
+                <CardDescription>Puntaje medio</CardDescription>
                 <CardTitle className="text-2xl">{data.resumen.score_medio}</CardTitle>
               </CardHeader>
               <CardContent className="text-xs text-muted-foreground">
@@ -364,7 +364,7 @@ export function RiskView() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Evidencia</TableHead>
-                    <TableHead className="w-20">Score A</TableHead>
+                    <TableHead className="w-20">Puntaje A</TableHead>
                     <TableHead className="w-20">RoBERTa</TableHead>
                     <TableHead className="w-24">Nivel</TableHead>
                   </TableRow>
@@ -375,9 +375,9 @@ export function RiskView() {
                       <TableCell className="min-w-0">
                         {it.chunk_index != null && (
                           <div className="mb-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-                            <Badge variant="secondary">chunk #{it.chunk_index}</Badge>
+                            <Badge variant="secondary">fragmento #{it.chunk_index}</Badge>
                             <span>
-                              msgs {it.msg_desde}–{it.msg_hasta}
+                              mensajes {it.msg_desde}–{it.msg_hasta}
                             </span>
                             {(it.fecha_desde || it.fecha_hasta) && (
                               <span>

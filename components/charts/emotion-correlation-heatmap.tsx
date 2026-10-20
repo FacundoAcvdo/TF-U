@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { etiquetaEmocion } from '@/lib/emotions'
 
 type Props = {
   correlation: { matrix: number[][]; order: string[]; flat: { x: string; y: string; value: number }[] }
@@ -24,13 +25,13 @@ export function EmotionCorrelationHeatmap({ correlation, topWords }: Props) {
         <div className="grid gap-px bg-border/60 p-px rounded-md overflow-hidden" style={{ gridTemplateColumns: `80px repeat(${order.length}, 108px)` }}>
           <div className="bg-card" />
           {order.map((emo) => (
-            <div key={emo} className="bg-card px-1 py-1 text-center text-[11px] font-medium capitalize text-muted-foreground truncate" title={emo}>
-              {emo}
+            <div key={emo} className="bg-card px-1 py-1 text-center text-[11px] font-medium capitalize text-muted-foreground truncate" title={etiquetaEmocion(emo)}>
+              {etiquetaEmocion(emo)}
             </div>
           ))}
           {order.map((rowEmo, i) => (
             <div key={rowEmo} className="contents">
-              <div className="bg-card flex items-center justify-end px-1.5 text-[11px] font-medium capitalize text-muted-foreground">{rowEmo}</div>
+              <div className="bg-card flex items-center justify-end px-1.5 text-[11px] font-medium capitalize text-muted-foreground">{etiquetaEmocion(rowEmo)}</div>
               {order.map((colEmo, j) => {
                 const v = matrix[i][j]
                 const isDiag = i === j
@@ -74,18 +75,18 @@ export function EmotionCorrelationHeatmap({ correlation, topWords }: Props) {
           className="pointer-events-none fixed z-50 max-w-[280px] rounded-md border bg-popover px-3 py-2 text-xs shadow-sm"
           style={{ left: hover.cx + 10, top: hover.cy + 10 }}
         >
-          <p className="font-medium capitalize text-foreground">{hover.y} ↔ {hover.x}</p>
+          <p className="font-medium capitalize text-foreground">{etiquetaEmocion(hover.y)} ↔ {etiquetaEmocion(hover.x)}</p>
           <p className="font-mono text-muted-foreground">r <span className="text-foreground">{hover.v.toFixed(3)}</span></p>
           {topWords && (
             <div className="mt-1.5 grid grid-cols-2 gap-2 border-t pt-1.5">
               <div>
-                <p className="font-medium capitalize text-[11px] text-foreground">{hover.y}</p>
+                <p className="font-medium capitalize text-[11px] text-foreground">{etiquetaEmocion(hover.y)}</p>
                 <p className="font-mono text-[11px] text-muted-foreground">
                   {(topWords[hover.y] || []).slice(0, 3).join(' · ') || '—'}
                 </p>
               </div>
               <div>
-                <p className="font-medium capitalize text-[11px] text-foreground">{hover.x}</p>
+                <p className="font-medium capitalize text-[11px] text-foreground">{etiquetaEmocion(hover.x)}</p>
                 <p className="font-mono text-[11px] text-muted-foreground">
                   {(topWords[hover.x] || []).slice(0, 3).join(' · ') || '—'}
                 </p>

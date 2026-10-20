@@ -149,7 +149,7 @@ export function UsersView() {
       <Card>
         <CardContent className="flex items-center gap-2.5 p-6 text-sm text-muted-foreground">
           <ShieldAlert className="h-4 w-4 shrink-0" />
-          Solo un super admin puede ver esta sección.
+          Solo un superadministrador puede ver esta sección.
         </CardContent>
       </Card>
     )

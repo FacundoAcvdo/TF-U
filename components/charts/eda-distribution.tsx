@@ -31,8 +31,8 @@ export function EdaDistribution({ distribution }: Props) {
       <div className="mb-2 flex items-center justify-between">
         <h4 className="text-xs font-medium text-muted-foreground">Histograma por clase — {mode === 'words' ? 'palabras por texto' : 'oraciones por texto'}</h4>
         <div className="flex rounded-md border p-0.5">
-          <button onClick={() => setMode('words')} className={`rounded px-2 py-1 text-xs ${mode === 'words' ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-muted'}`}>words</button>
-          <button onClick={() => setMode('sentences')} className={`rounded px-2 py-1 text-xs ${mode === 'sentences' ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-muted'}`}>sentences</button>
+          <button onClick={() => setMode('words')} className={`rounded px-2 py-1 text-xs ${mode === 'words' ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-muted'}`}>palabras</button>
+          <button onClick={() => setMode('sentences')} className={`rounded px-2 py-1 text-xs ${mode === 'sentences' ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-muted'}`}>oraciones</button>
         </div>
       </div>
       <div className="h-[280px] w-full">
@@ -58,7 +58,7 @@ export function EdaDistribution({ distribution }: Props) {
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <p className="mt-1 text-center text-[11px] text-muted-foreground">hover para conteo por clase</p>
+      <p className="mt-1 text-center text-[11px] text-muted-foreground">al pasar el cursor para conteo por clase</p>
     </div>
   )
 }

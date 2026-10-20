@@ -257,7 +257,7 @@ export function TopicsView() {
       <AnalysisRunner
         icon={Layers}
         runLabel="Extraer tópicos"
-        idleHint="Aplica modelado de tópicos con BERTopic sobre el corpus para descubrir los temas latentes y sus términos representativos."
+        idleHint="Detecta automáticamente los temas principales presentes en los textos, agrupando los mensajes por asunto y mostrando las palabras más representativas de cada tema. Sirve para descubrir de qué se habla en un corpus grande sin necesidad de leerlo completo."
         estado={estado}
         ejecutarFuncion={ejecutarTopicModeling}
       >
@@ -322,7 +322,7 @@ export function TopicsView() {
 
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      Outliers
+                      Atípicos
                     </p>
 
                     <p className="text-2xl font-semibold">
@@ -377,7 +377,7 @@ export function TopicsView() {
                     <div className="flex items-start gap-4 pr-8">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-3">
-                          <DialogTitle>{selectedTopic.title ?? `Topic ${selectedTopic.topic_id + 1}`}</DialogTitle>
+                          <DialogTitle>{selectedTopic.title ?? `Tópico ${selectedTopic.topic_id + 1}`}</DialogTitle>
                           <Badge variant="secondary">
                             {selectedTopic.percentage.toFixed(1)}%
                           </Badge>
@@ -448,7 +448,7 @@ function TopicRanking({
     <button
       type="button"
       onClick={onClick}
-      aria-label={`Ver detalles del topic ${topic.topic_id + 1}`}
+      aria-label={`Ver detalles del tópico ${topic.topic_id + 1}`}
       className={[
         'group w-full cursor-pointer rounded-lg border p-4 text-left',
         'transition-all duration-150',

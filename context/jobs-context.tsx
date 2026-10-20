@@ -87,22 +87,27 @@ export function JobsProvider({ children }: { children: ReactNode }) {
           continue // error de red transitorio: se reintenta en el próximo ciclo
         }
         if (job.status !== 'succeeded' && job.status !== 'failed') continue
+        // La notificación se dispara FUERA del updater de setTasks: hacerlo
+        // dentro provoca un setState en otro componente mientras JobsProvider
+        // renderiza (React lo rechaza).
+        const actual = tasksRef.current[t.key]
+        if (!actual || actual.status !== 'running') continue
+        if (!notifiedRef.current.has(t.jobId)) {
+          notifiedRef.current.add(t.jobId)
+          if (job.status === 'succeeded') toast.success(t.successMessage)
+          else toast.error(errorMessageForJob(job.error_code))
+        }
         setTasks((prev) => {
-          const actual = prev[t.key]
-          if (!actual || actual.status !== 'running') return prev
-          if (!notifiedRef.current.has(t.jobId)) {
-            notifiedRef.current.add(t.jobId)
-            if (job.status === 'succeeded') toast.success(t.successMessage)
-            else toast.error(errorMessageForJob(job.error_code))
-          }
+          const current = prev[t.key]
+          if (!current || current.status !== 'running') return prev
           return {
             ...prev,
             [t.key]: {
-              ...actual,
+              ...current,
               status: job.status as TaskStatus,
               result: job.result,
               errorCode: job.error_code ?? null,
-              params: job.params ?? actual.params ?? null,
+              params: job.params ?? current.params ?? null,
             },
           }
         })

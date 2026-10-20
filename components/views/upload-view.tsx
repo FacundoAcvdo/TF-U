@@ -42,6 +42,7 @@ import {
 
 import { previewDataset } from '@/lib/dataset/preview'
 import type { DatasetPreviewData } from '@/lib/dataset/types'
+import { etiquetaTipoColumna } from '@/lib/dataset/types'
 import type { AutoConvertSourceFormat } from '@/lib/dataset/autoConvert'
 import { obtenerFormatoOriginal } from '@/lib/dataset/autoConvert'
 import { buildUploadFormData } from '@/lib/dataset/upload'
@@ -639,7 +640,7 @@ export function UploadView() {
                     {column.name}
                     {' '}
                     <span className="text-muted-foreground">
-                      ({column.type})
+                      ({etiquetaTipoColumna(column.type)})
                     </span>
                   </SelectItem>
                 ))}
@@ -673,7 +674,7 @@ export function UploadView() {
                       {column.name}
                       {' '}
                       <span className="text-muted-foreground">
-                        ({column.type})
+                        ({etiquetaTipoColumna(column.type)})
                       </span>
                     </SelectItem>
                   ))}
@@ -739,7 +740,7 @@ export function UploadView() {
                     {column.name}
                     {' '}
                     <span className="text-muted-foreground">
-                      ({column.type})
+                      ({etiquetaTipoColumna(column.type)})
                     </span>
                   </SelectItem>
                 ))}
@@ -774,7 +775,7 @@ export function UploadView() {
                         {column.name}
                         {' '}
                         <span className="text-muted-foreground">
-                          ({column.type})
+                          ({etiquetaTipoColumna(column.type)})
                         </span>
                       </SelectItem>
                     ))}

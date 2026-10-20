@@ -283,7 +283,7 @@ function StorageManagementView() {
             />
 
             <StorageStat
-              label="Embeddings Chunks"
+              label="Fragmentos de embeddings"
               value={formatBytes(totalChunkedSize || 0)}
             />
 
@@ -543,7 +543,7 @@ function StorageManagementView() {
 
                               <div>
                                 <p className="text-sm font-medium">
-                                  Embeddings Chunks
+                                  Fragmentos de embeddings
                                 </p>
 
                                 <p className="text-xs text-muted-foreground">

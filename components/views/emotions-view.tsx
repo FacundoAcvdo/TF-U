@@ -51,9 +51,9 @@ type EmotionsResponse = {
 }
 
 const classViews = [
-  { label: "Promedio (mean)", value: "mean" as const },
-  { label: "Mediana (median)", value: "median" as const },
-  { label: "Desviación estándar (std)", value: "std" as const },
+  { label: "Promedio", value: "mean" as const },
+  { label: "Mediana", value: "median" as const },
+  { label: "Desviación estándar", value: "std" as const },
 ]
 
 const corpusViews = [
@@ -133,7 +133,7 @@ export function EmotionsView() {
     <AnalysisRunner
       icon={HeartCrack}
       runLabel="Detectar emociones"
-      idleHint="Clasifica cada mensaje según la emoción predominante (Empath) y agrega resultados."
+      idleHint="Analiza cada mensaje e identifica la emoción que predomina en él (por ejemplo, tristeza, enojo, miedo o alegría). Permite ver qué emociones aparecen más en el conjunto de textos, útil para estudiar el estado emocional asociado al bienestar y al riesgo en salud mental."
       ejecutarFuncion={ejecutarEmotions}
       estado={estado}
     >

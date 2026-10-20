@@ -39,7 +39,7 @@ export function DashboardShell({ children, userEmail = 'usuario@demo.local' }: D
   const pathname = usePathname()
 
   const viewId = pathname ? getViewIdByPathname(pathname) : null
-  const meta = viewId ? viewMeta[viewId] : { titulo: 'Dashboard', descripcion: 'Plataforma de análisis' }
+  const meta = viewId ? viewMeta[viewId] : { titulo: 'Dashboard', descripcion: 'Plataforma de Lenguaje y Análisis de Salud Mental Automatizado' }
 
   const { datasetSeleccionado, setDatasetSeleccionado } = useDataset()
   const { data: datasets } = useDatasetsQuery()

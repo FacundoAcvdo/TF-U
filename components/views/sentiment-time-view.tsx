@@ -27,6 +27,7 @@ import { Input } from '@/components/ui/input'
 import { useDataset } from '@/context/dataset-provider'
 import { useJobs } from '@/context/jobs-context'
 import { apiFetch } from '@/lib/api-fetch'
+import { etiquetaEmocion } from '@/lib/emotions'
 
 type Usuario = {
   remitente: string
@@ -72,15 +73,6 @@ const EMOCIONES_ORDEN = [
   'sadness',
   'surprise',
 ]
-
-const EMOCIONES_ETIQUETA: Record<string, string> = {
-  anger: 'Enojo',
-  disgust: 'Disgusto',
-  fear: 'Miedo',
-  joy: 'Alegría',
-  sadness: 'Tristeza',
-  surprise: 'Sorpresa',
-}
 
 const formatearPorcentaje = (valor: number) =>
   `${(Number(valor) * 100).toFixed(1)}%`
@@ -432,8 +424,8 @@ export function SentimentTimeView() {
               runLabel="Ver evolución de emociones"
               idleHint={
                 remitenteSeleccionado
-                  ? `Analiza los mensajes de ${remitenteSeleccionado} y arma una línea de tiempo con el porcentaje de cada emoción por período.`
-                  : 'Seleccioná un participante para ver la evolución de sus emociones a lo largo del tiempo.'
+                  ? `Analiza los mensajes de ${remitenteSeleccionado} y muestra cómo evoluciona su tono emocional (más positivo, neutro o negativo) a lo largo del tiempo. Ayuda a detectar cambios de ánimo sostenidos o momentos de mayor malestar.`
+                  : 'Seleccioná un participante para ver cómo evoluciona su tono emocional a lo largo del tiempo y detectar cambios de ánimo sostenidos o momentos de mayor malestar.'
               }
               estado={estado}
               ejecutarFuncion={ejecutarEvolucion}
@@ -596,8 +588,7 @@ export function SentimentTimeView() {
                                         <p className="text-[11px] text-muted-foreground">
                                           Predomina{' '}
                                           <strong className="font-medium text-foreground">
-                                            {EMOCIONES_ETIQUETA[dominante] ??
-                                              dominante}
+                                            {etiquetaEmocion(dominante)}
                                           </strong>
                                         </p>
                                       )}
@@ -613,8 +604,7 @@ export function SentimentTimeView() {
                                             className="text-xs font-normal"
                                             title={`Puntaje promedio: ${valor.toFixed(4)}`}
                                           >
-                                            {EMOCIONES_ETIQUETA[emocion] ??
-                                              emocion}
+                                            {etiquetaEmocion(emocion)}
                                             <span className="ml-1 font-medium">
                                               {formatearPorcentaje(valor)}
                                             </span>
