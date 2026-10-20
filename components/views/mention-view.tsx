@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ShieldAlert, Download, FileCode2, Settings2, Database, TriangleAlert, Info } from 'lucide-react'
 import { AnalysisRunner } from '@/components/analysis-runner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,7 +15,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useDataset } from '@/context/dataset-provider'
+import { useJobs } from '@/context/jobs-context'
 import { API_BASE } from '@/lib/api-base'
+import { Checkbox } from '@/components/ui/checkbox'
 
 const VALIDACION_CRUZADA = 'Validación Cruzada'
 const ENTRENAMIENTO_PRUEBA = 'Entrenamiento y Prueba'
@@ -32,9 +34,15 @@ const modelos = [
   'BERT',
 ] as const
 
-type Modelo = (typeof modelos)[number]
+const C_OPS_LOGREG = ['0.1', '0.5', '1', '2', '5']
+const C_OPS_SVM = ['0.25', '0.5', '1', '2']
+const ITER_OPS = ['500', '1000', '2000', '3000']
+const RF_EST_OPS = ['100', '200', '400']
+const RF_DEPTH_OPS = ['auto', '10', '20']
+const RF_LEAF_OPS = ['1', '2']
+const NB_SMOOTH_OPS = ['1e-9', '1e-8', '1e-7']
 
-const MODELOS_SIN_VALIDACION_CRUZADA: Modelo[] = ['BERT']
+type Modelo = (typeof modelos)[number]
 
 function formatearPorcentaje(valor: number): string {
   const truncado = Math.trunc(valor * 100 * 100) / 100
@@ -67,22 +75,32 @@ export function MentionView() {
   const [modeloDescargaUrl, setModeloDescargaUrl] = useState<string | null>(null)
   const [nombreArchivo, setNombreArchivo] = useState<string>('modelo.zip')
   const [errorMensaje, setErrorMensaje] = useState<string | null>(null)
+  const [modificarParams, setModificarParams] = useState(false)
+  const [cLogreg, setCLogreg] = useState('1')
+  const [iterLogreg, setIterLogreg] = useState('1000')
+  const [cSvm, setCSvm] = useState('1')
+  const [iterSvm, setIterSvm] = useState('3000')
+  const [nEst, setNEst] = useState('100')
+  const [maxDepth, setMaxDepth] = useState('auto')
+  const [minLeaf, setMinLeaf] = useState('1')
+  const [varSmooth, setVarSmooth] = useState('1e-9')
+  const [bertModelo, setBertModelo] = useState('auto')
+  const [bertRapido, setBertRapido] = useState(false)
 
   const { datasetSeleccionado } = useDataset()
+  const { tasks, startTask, adoptTask, consumeTask } = useJobs()
+  const taskKey = datasetSeleccionado ? `classification:${datasetSeleccionado}` : null
+  const task = taskKey ? tasks[taskKey] : undefined
 
   const porcentajeEntrenamiento = porcentajeTrain[0] ?? 50
   const porcentajePrueba = 100 - porcentajeEntrenamiento
 
-  const soportaValidacionCruzada = !MODELOS_SIN_VALIDACION_CRUZADA.includes(modeloSeleccionado)
+  const soportaValidacionCruzada = true
   const esBert = modeloSeleccionado === 'BERT'
 
   const handleModeloChange = (val: string) => {
     const nuevoModelo = (val as Modelo) ?? modelos[0]
     setModeloSeleccionado(nuevoModelo)
-
-    if (MODELOS_SIN_VALIDACION_CRUZADA.includes(nuevoModelo) && metodoDeEntrenamiento === VALIDACION_CRUZADA) {
-      setMetodoDeEntrenamiento(ENTRENAMIENTO_PRUEBA)
-    }
   }
 
   const handleReset = () => {
@@ -103,6 +121,29 @@ export function MentionView() {
 
     const usaValidacionCruzada = soportaValidacionCruzada && metodoDeEntrenamiento === VALIDACION_CRUZADA
 
+    let hiperparametros: Record<string, number | string | boolean | null> | undefined
+    if (modificarParams && esBert) {
+      hiperparametros = {
+        bert_modelo: bertModelo,
+        bert_rapido: bertRapido,
+      }
+    }
+    if (modificarParams && !esBert) {
+      if (modeloSeleccionado === 'Logistic Regression') {
+        hiperparametros = { C: Number(cLogreg), max_iter: Number(iterLogreg) }
+      } else if (modeloSeleccionado === 'Support Vector Machine') {
+        hiperparametros = { C: Number(cSvm), max_iter: Number(iterSvm) }
+      } else if (modeloSeleccionado === 'Random Forest') {
+        hiperparametros = {
+          n_estimators: Number(nEst),
+          max_depth: maxDepth === 'auto' ? null : Number(maxDepth),
+          min_samples_leaf: Number(minLeaf),
+        }
+      } else if (modeloSeleccionado === 'Naive Bayes') {
+        hiperparametros = { var_smoothing: Number(varSmooth) }
+      }
+    }
+
     const body = {
       dataset: datasetSeleccionado,
       modelo: modeloSeleccionado,
@@ -110,44 +151,56 @@ export function MentionView() {
       ...(usaValidacionCruzada
         ? { k: Number(valorK) }
         : {
-            porcentaje_entrenamiento: porcentajeEntrenamiento,
             porcentaje_prueba: porcentajePrueba,
           }),
+      ...(hiperparametros ? { hiperparametros } : {}),
     }
 
     try {
-      const res = await fetch(`${API_BASE}/classification/detectar_menciones`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+      if (!taskKey) return
+      await startTask({
+        key: taskKey,
+        service: 'classification',
+        operation: 'detectar_menciones',
+        jobType: 'classification',
+        dataset: datasetSeleccionado,
+        body,
+        successMessage: 'Modelo entrenado correctamente.',
       })
+    } catch {
+      setEstado('idle')
+    }
+  }
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null)
-        const mensaje = errorData?.detail ?? 'Ocurrió un error al detectar menciones. Por favor, inténtelo de nuevo.'
-        console.warn('Error al detectar menciones:', mensaje)
-        setErrorMensaje(typeof mensaje === 'string' ? mensaje : JSON.stringify(mensaje))
-        setEstado('idle')
-        return
-      }
+  useEffect(() => {
+    if (!datasetSeleccionado || !taskKey) return
+    adoptTask({
+      key: taskKey,
+      service: 'classification',
+      jobType: 'classification',
+      dataset: datasetSeleccionado,
+      successMessage: 'Modelo entrenado correctamente.',
+    })
+  }, [datasetSeleccionado])
 
-      const data = await res.json()
-
-      // El modelo queda guardado en el servidor y se descarga por link
-      // (antes viajaba en base64 dentro del JSON y tumbaba la conexión con BERT).
+  useEffect(() => {
+    if (!task || task.consumed) return
+    if (task.status === 'running') {
+      setEstado('running')
+    } else if (task.status === 'succeeded') {
+      const data = task.result as { resumen: ResumenMenciones; model_id?: string; nombre_archivo?: string }
       setResultado(data.resumen)
       setModeloDescargaUrl(
         `${API_BASE}/classification/descargar_modelo?model_id=${encodeURIComponent(data.model_id ?? '')}`,
       )
       setNombreArchivo(data.nombre_archivo ?? 'modelo.zip')
       setEstado('done')
-    } catch (error) {
-      console.warn('Error de conexión al detectar menciones:', error)
-      setErrorMensaje('No se pudo conectar con el servidor. Por favor, inténtelo de nuevo.')
+      consumeTask(task.key)
+    } else {
       setEstado('idle')
+      consumeTask(task.key)
     }
-  }
+  }, [task])
 
   const handleDescargar = () => {
     if (!modeloDescargaUrl) return
@@ -234,7 +287,6 @@ export function MentionView() {
                         <SelectItem
                           key={item}
                           value={item}
-                          disabled={item === VALIDACION_CRUZADA && !soportaValidacionCruzada}
                         >
                           {item}
                         </SelectItem>
@@ -251,8 +303,8 @@ export function MentionView() {
                     <span>Prueba: {porcentajePrueba}%</span>
                   </div>
                   <Slider
-                    min={10}
-                    max={90}
+                    min={5}
+                    max={95}
                     step={5}
                     disabled={Boolean(resultado)}
                     value={porcentajeTrain}
@@ -295,10 +347,130 @@ export function MentionView() {
               <div className="flex items-start gap-2.5 rounded-lg border bg-muted/30 px-3.5 py-2.5 text-xs text-muted-foreground">
                 <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                 <span>
-                  BERT reentrena la red completa sobre los textos del dataset. Solo admite
-                  división en entrenamiento y prueba, puede tardar varios minutos y el archivo
-                  resultante pesa cientos de megabytes.
+                  BERT reentrena la red completa sobre los textos del dataset. Puede demorar
+                  bastante tiempo (más aún con validación cruzada) y el archivo resultante
+                  pesa cientos de megabytes.
                 </span>
+              </div>
+            )}
+
+            {!resultado && (
+              <div className="flex flex-col gap-3 rounded-lg border px-3.5 py-3">
+                <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                  <Checkbox
+                    checked={modificarParams}
+                    onCheckedChange={(v) => setModificarParams(v === true)}
+                  />
+                  Modificar parámetros
+                </label>
+                {modificarParams && esBert && (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-muted-foreground">Modelo base (auto detecta idioma)</label>
+                      <Select value={bertModelo} onValueChange={(v) => setBertModelo(v ?? 'auto')}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectGroup>
+                          <SelectItem value="auto">Auto (por idioma y equipo)</SelectItem>
+                          <SelectItem value="es_base">Español grande</SelectItem>
+                          <SelectItem value="en">Inglés</SelectItem>
+                        </SelectGroup></SelectContent>
+                      </Select>
+                    </div>
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <Checkbox
+                        checked={bertRapido}
+                        onCheckedChange={(v) => setBertRapido(v === true)}
+                      />
+                      Modo rápido (solo capa final, mucho más veloz)
+                    </label>
+                  </div>
+                )}
+                {modificarParams && modeloSeleccionado === 'Logistic Regression' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-muted-foreground">C (regularización inversa)</label>
+                      <Select value={cLogreg} onValueChange={(v) => setCLogreg(v ?? '1')}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectGroup>
+                          {C_OPS_LOGREG.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                        </SelectGroup></SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-muted-foreground">Iteraciones máximas</label>
+                      <Select value={iterLogreg} onValueChange={(v) => setIterLogreg(v ?? '1000')}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectGroup>
+                          {ITER_OPS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                        </SelectGroup></SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+                {modificarParams && modeloSeleccionado === 'Support Vector Machine' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-muted-foreground">C</label>
+                      <Select value={cSvm} onValueChange={(v) => setCSvm(v ?? '1')}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectGroup>
+                          {C_OPS_SVM.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                        </SelectGroup></SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-muted-foreground">Iteraciones máximas</label>
+                      <Select value={iterSvm} onValueChange={(v) => setIterSvm(v ?? '3000')}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectGroup>
+                          {ITER_OPS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                        </SelectGroup></SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+                {modificarParams && modeloSeleccionado === 'Random Forest' && (
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-muted-foreground">Cantidad de árboles</label>
+                      <Select value={nEst} onValueChange={(v) => setNEst(v ?? '100')}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectGroup>
+                          {RF_EST_OPS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                        </SelectGroup></SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-muted-foreground">Profundidad máxima</label>
+                      <Select value={maxDepth} onValueChange={(v) => setMaxDepth(v ?? 'auto')}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectGroup>
+                          {RF_DEPTH_OPS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                        </SelectGroup></SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-muted-foreground">Mínimo de muestras por hoja</label>
+                      <Select value={minLeaf} onValueChange={(v) => setMinLeaf(v ?? '1')}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectGroup>
+                          {RF_LEAF_OPS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                        </SelectGroup></SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+                {modificarParams && modeloSeleccionado === 'Naive Bayes' && (
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-muted-foreground">Suavizado de varianza</label>
+                    <Select value={varSmooth} onValueChange={(v) => setVarSmooth(v ?? '1e-9')}>
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectGroup>
+                        {NB_SMOOTH_OPS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                      </SelectGroup></SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
@@ -307,8 +479,8 @@ export function MentionView() {
         {!resultado ? (
           <AnalysisRunner
             icon={ShieldAlert}
-            runLabel="Detectar menciones"
-            idleHint="Entrena un clasificador con tu dataset, evalúa su matriz de confusión y descarga el modelo resultante."
+            runLabel="Construir modelo"
+            idleHint="Entrena un modelo que aprende, a partir de tus datos ya clasificados, a reconocer los mensajes que podrían indicar mención o ideación suicida. Muestra qué tan bien distingue una clase de la otra y permite descargar el modelo para reutilizarlo. Necesita un dataset clasificado para poder entrenarse."
             estado={estado}
             ejecutarFuncion={ejecutarDeteccion}
           >
@@ -336,26 +508,25 @@ export function MentionView() {
             <CardContent className="flex flex-col items-center gap-6 py-5">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full text-center">
                 <div className="p-2.5 rounded-lg bg-muted/20 border text-xs">
-                  <span className="text-muted-foreground block text-[11px]">Total Dataset</span>
+                  <span className="text-muted-foreground block text-[11px]">Total del dataset</span>
                   <strong className="text-foreground text-sm">
                     {resultado.total_muestras.toLocaleString()}
                   </strong>
                 </div>
                 <div className="p-2.5 rounded-lg bg-muted/20 border text-xs">
-                  <span className="text-muted-foreground block text-[11px]">Set Entrenamiento</span>
+                  <span className="text-muted-foreground block text-[11px]">Conjunto de entrenamiento</span>
                   <strong className="text-foreground text-sm">
                     {resultado.muestras_train.toLocaleString()}
                   </strong>
                 </div>
                 <div className="p-2.5 rounded-lg bg-muted/20 border text-xs">
-                  <span className="text-muted-foreground block text-[11px]">Set Prueba / Validación</span>
+                  <span className="text-muted-foreground block text-[11px]">Conjunto de prueba / validación</span>
                   <strong className="text-foreground text-sm">
                     {resultado.muestras_test.toLocaleString()}
                   </strong>
                 </div>
               </div>
 
-              {/* MATRIZ DE CONFUSIÓN DINÁMICA (Soporta múltiples clases) */}
               <div className="w-full flex flex-col items-center gap-2">
                 <span className="text-xs font-medium text-muted-foreground">
                   Matriz de Confusión (Filas: Real, Columnas: Predicha)
@@ -364,7 +535,7 @@ export function MentionView() {
                   <table className="text-xs text-center border-collapse">
                     <thead>
                       <tr>
-                        <th className="p-2 border-b border-r bg-muted/20 text-muted-foreground font-semibold">Real \ Pred</th>
+                        <th className="p-2 border-b border-r bg-muted/20 text-muted-foreground font-semibold">Real \ Predicha</th>
                         {resultado.clases.map((c, idx) => (
                           <th key={idx} className="p-2 border-b border-r bg-muted/20 font-medium text-foreground max-w-[100px] truncate px-3" title={c}>
                             {c}
@@ -410,7 +581,7 @@ export function MentionView() {
                   </span>
                 </div>
                 <div className="flex flex-col items-center gap-0.5 px-3.5 py-2 rounded-lg border bg-muted/30 text-xs text-muted-foreground text-center">
-                  <span>F1-Score</span>
+                  <span>F1 Score</span>
                   <span className="font-semibold text-foreground text-sm">
                     {formatearPorcentaje(resultado.f1_score)}
                   </span>

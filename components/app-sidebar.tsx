@@ -1,9 +1,11 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Activity, LogOut } from 'lucide-react'
+import { useTheme } from 'next-themes'
+import { LogOut, Moon, Sun } from 'lucide-react'
 import { navGroups } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
 
@@ -15,6 +17,12 @@ export function AppSidebar({
   const pathname = usePathname()
   const router = useRouter()
   const [esAdmin, setEsAdmin] = useState(false)
+  const { resolvedTheme, setTheme } = useTheme()
+  const [montado, setMontado] = useState(false)
+
+  useEffect(() => {
+    setMontado(true)
+  }, [])
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -40,13 +48,35 @@ export function AppSidebar({
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex items-center gap-2.5 px-5 py-5">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-          <Activity className="size-4" />
-        </span>
-        <div className="flex min-w-0 flex-col">
-          <span className="truncate text-sm font-semibold leading-tight">TFU</span>
-          <span className="truncate text-xs text-sidebar-foreground/60">Análisis de datos</span>
+        <Image
+          src="/logo.png"
+          alt="PLASMA"
+          width={32}
+          height={32}
+          className="size-8 shrink-0"
+          priority
+        />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate text-sm font-semibold leading-tight">PLASMA</span>
+          <span className="truncate text-xs text-sidebar-foreground/60">Salud mental</span>
         </div>
+        <button
+          type="button"
+          onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+          aria-label={resolvedTheme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+          title={resolvedTheme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+          className="flex size-9 shrink-0 items-center justify-center rounded-full text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        >
+          {montado ? (
+            resolvedTheme === 'dark' ? (
+              <Sun className="size-4" />
+            ) : (
+              <Moon className="size-4" />
+            )
+          ) : (
+            <Moon className="size-4 opacity-0" />
+          )}
+        </button>
       </div>
 
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-4">

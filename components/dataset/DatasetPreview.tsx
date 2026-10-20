@@ -1,6 +1,7 @@
 'use client'
 
 import type { DatasetPreviewData } from '@/lib/dataset/types'
+import { etiquetaTipoColumna } from '@/lib/dataset/types'
 import { Badge } from '@/components/ui/badge'
 
 type DatasetPreviewProps = {
@@ -50,7 +51,7 @@ export function DatasetPreview({
                     <span>{column.name}</span>
 
                     <span className="text-xs font-normal text-muted-foreground">
-                      {column.type}
+                      {etiquetaTipoColumna(column.type)}
                     </span>
                   </div>
                 </th>

@@ -27,8 +27,6 @@ import {
   ComboboxList,
 } from '@/components/ui/combobox'
 
-import { Toaster } from '@/components/ui/sonner'
-
 import { Button } from '@/components/ui/button'
 
 type DashboardShellProps = {
@@ -41,7 +39,7 @@ export function DashboardShell({ children, userEmail = 'usuario@demo.local' }: D
   const pathname = usePathname()
 
   const viewId = pathname ? getViewIdByPathname(pathname) : null
-  const meta = viewId ? viewMeta[viewId] : { titulo: 'Dashboard', descripcion: 'Plataforma de análisis' }
+  const meta = viewId ? viewMeta[viewId] : { titulo: 'Dashboard', descripcion: 'Plataforma de Lenguaje y Análisis de Salud Mental Automatizado' }
 
   const { datasetSeleccionado, setDatasetSeleccionado } = useDataset()
   const { data: datasets } = useDatasetsQuery()
@@ -124,7 +122,6 @@ export function DashboardShell({ children, userEmail = 'usuario@demo.local' }: D
 
         <main className="flex-1 p-4 md:p-8">
           <div className="mx-auto max-w-6xl">{children}</div>
-          <Toaster />
         </main>
       </div>
     </div>

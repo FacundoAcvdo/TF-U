@@ -54,11 +54,11 @@ export function AnalysisRunner({
           </span>
           <div className="flex max-w-md flex-col gap-1">
             <p className="text-sm font-medium text-foreground">
-              {estado === 'running' ? 'Procesando el dataset…' : 'Esta operación no se ejecuta automáticamente'}
+              {estado === 'running' ? 'Esperando resultados…' : 'Esta operación no se ejecuta automáticamente'}
             </p>
             <p className="text-sm text-muted-foreground text-pretty">
               {estado === 'running'
-                ? 'Aplicando el modelo sobre los mensajes cargados. Esto puede tardar unos segundos.'
+                ? 'Podés navegar a otra pantalla: te avisaremos con una notificación cuando termine.'
                 : idleHint}
             </p>
           </div>

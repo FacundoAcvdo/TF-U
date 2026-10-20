@@ -5,7 +5,16 @@ import { UserPlus, Trash2, Check, TriangleAlert, ShieldAlert, KeyRound } from 'l
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { API_BASE} from '@/lib/api-base'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { ApiError, apiFetch } from '@/lib/api-fetch'
+import { toast } from 'sonner'
 
 type UsuarioReal = {
   id: string
@@ -34,17 +43,16 @@ export function UsersView() {
 
   const cargar = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/auth/admin/users`, { credentials: 'include' })
-      if (res.status === 401 || res.status === 403) {
+      const data = await apiFetch<{ users?: UsuarioReal[] }>(`/auth/admin/users`, { method: 'GET' }, { silent: true })
+      setUsuarios(Array.isArray(data.users) ? data.users : [])
+      setEstado('ok')
+    } catch (e) {
+      if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
         setEstado('denegado')
         return
       }
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      setUsuarios(Array.isArray(data.users) ? data.users : [])
-      setEstado('ok')
-    } catch {
-      setErrorMensaje('No se pudo conectar con el servidor.')
+      setErrorMensaje(e instanceof Error ? e.message : 'No se pudo conectar con el servidor.')
+      toast.error(e instanceof Error ? e.message : 'No se pudo conectar con el servidor.')
       setEstado('ok')
     }
   }, [])
@@ -69,24 +77,18 @@ export function UsersView() {
     setMensaje(null)
     setErrorMensaje(null)
     try {
-      const res = await fetch(`${API_BASE}/auth/admin/users`, {
+      await apiFetch(`/auth/admin/users`, {
         method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password, role: rol }),
       })
-      const data = await res.json().catch(() => null)
-      if (!res.ok) {
-        setErrorMensaje(typeof data?.detail === 'string' ? data.detail : 'No se pudo crear el usuario.')
-      } else {
-        setMensaje('Usuario creado correctamente')
-        setEmail('')
-        setPassword('')
-        setRol('user')
-        await cargar()
-      }
-    } catch {
-      setErrorMensaje('No se pudo conectar con el servidor.')
+      setMensaje('Usuario creado correctamente')
+      setEmail('')
+      setPassword('')
+      setRol('user')
+      await cargar()
+    } catch (e) {
+      const mensaje = e instanceof Error ? e.message : 'No se pudo conectar con el servidor.'
+      setErrorMensaje(mensaje)
     } finally {
       setProcesando(false)
     }
@@ -96,20 +98,13 @@ export function UsersView() {
     if (nuevoRol === u.role) return
     setErrorMensaje(null)
     try {
-      const res = await fetch(`${API_BASE}/auth/admin/users/${u.id}/role`, {
+      await apiFetch(`/auth/admin/users/${u.id}/role`, {
         method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: nuevoRol }),
       })
-      const data = await res.json().catch(() => null)
-      if (!res.ok) {
-        setErrorMensaje(typeof data?.detail === 'string' ? data.detail : 'No se pudo cambiar el rol.')
-      } else {
-        await cargar()
-      }
-    } catch {
-      setErrorMensaje('No se pudo conectar con el servidor.')
+      await cargar()
+    } catch (e) {
+      setErrorMensaje(e instanceof Error ? e.message : 'No se pudo conectar con el servidor.')
     }
   }
 
@@ -121,40 +116,25 @@ export function UsersView() {
     setErrorMensaje(null)
     setMensaje(null)
     try {
-      const res = await fetch(`${API_BASE}/auth/admin/users/${porClave.id}/password`, {
+      await apiFetch(`/auth/admin/users/${porClave.id}/password`, {
         method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: nuevaClave }),
       })
-      const data = await res.json().catch(() => null)
-      if (!res.ok) {
-        setErrorMensaje(typeof data?.detail === 'string' ? data.detail : 'No se pudo cambiar la contraseña.')
-      } else {
-        setMensaje(`Contraseña de ${porClave.email} actualizada.`)
-        setPorClave(null)
-        setNuevaClave('')
-      }
-    } catch {
-      setErrorMensaje('No se pudo conectar con el servidor.')
+      setMensaje(`Contraseña de ${porClave.email} actualizada.`)
+      setPorClave(null)
+      setNuevaClave('')
+    } catch (e) {
+      setErrorMensaje(e instanceof Error ? e.message : 'No se pudo conectar con el servidor.')
     }
   }
 
   async function eliminar(id: string) {
     setErrorMensaje(null)
     try {
-      const res = await fetch(`${API_BASE}/auth/admin/users/${id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      })
-      const data = await res.json().catch(() => null)
-      if (!res.ok) {
-        setErrorMensaje(typeof data?.detail === 'string' ? data.detail : 'No se pudo eliminar el usuario.')
-      } else {
-        await cargar()
-      }
-    } catch {
-      setErrorMensaje('No se pudo conectar con el servidor.')
+      await apiFetch(`/auth/admin/users/${id}`, { method: 'DELETE' })
+      await cargar()
+    } catch (e) {
+      setErrorMensaje(e instanceof Error ? e.message : 'No se pudo conectar con el servidor.')
     } finally {
       setPorEliminar(null)
     }
@@ -169,7 +149,7 @@ export function UsersView() {
       <Card>
         <CardContent className="flex items-center gap-2.5 p-6 text-sm text-muted-foreground">
           <ShieldAlert className="h-4 w-4 shrink-0" />
-          Solo un super admin puede ver esta sección.
+          Solo un superadministrador puede ver esta sección.
         </CardContent>
       </Card>
     )
@@ -216,14 +196,17 @@ export function UsersView() {
               </label>
               <label className="flex flex-col gap-1.5 text-sm font-medium">
                 Rol
-                <select
-                  value={rol}
-                  onChange={(e) => setRol(e.target.value)}
-                  className="h-9 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
-                >
-                  <option value="user">Usuario</option>
-                  <option value="admin">Administrador</option>
-                </select>
+                <Select value={rol} onValueChange={(v) => setRol(v ?? 'user')}>
+                  <SelectTrigger className="w-full">
+                    <span className="flex flex-1 text-left">{etiquetaRol(rol)}</span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="user">Usuario</SelectItem>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </label>
               <Button type="submit" disabled={procesando}>
                 <UserPlus />
@@ -254,15 +237,20 @@ export function UsersView() {
                     Alta: {u.created_at && u.created_at !== 'None' ? new Date(u.created_at).toLocaleDateString() : '—'}
                   </span>
                 </div>
-                <select
+                <Select
                   value={u.role}
-                  onChange={(e) => void cambiarRol(u, e.target.value)}
-                  className="h-8 rounded-lg border border-input bg-background px-2 text-xs outline-none"
-                  aria-label={`Rol de ${u.email}`}
+                  onValueChange={(v) => void cambiarRol(u, v ?? u.role)}
                 >
-                  <option value="user">Usuario</option>
-                  <option value="admin">Administrador</option>
-                </select>
+                  <SelectTrigger className="h-8 w-[130px] text-xs" aria-label={`Rol de ${u.email}`}>
+                    <span className="flex flex-1 text-left">{etiquetaRol(u.role)}</span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="user">Usuario</SelectItem>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
                 <Badge variant={u.role === 'admin' ? 'default' : 'secondary'}>
                   {etiquetaRol(u.role)}
                 </Badge>
@@ -274,6 +262,7 @@ export function UsersView() {
                     setNuevaClave('')
                   }}
                   aria-label={`Cambiar contraseña de ${u.email}`}
+                  title="Cambiar contraseña"
                   className="text-muted-foreground hover:text-foreground"
                 >
                   <KeyRound />
@@ -283,6 +272,7 @@ export function UsersView() {
                   size="icon-sm"
                   onClick={() => setPorEliminar(u)}
                   aria-label={`Eliminar a ${u.email}`}
+                  title="Eliminar usuario"
                   className="text-muted-foreground hover:text-destructive"
                 >
                   <Trash2 />

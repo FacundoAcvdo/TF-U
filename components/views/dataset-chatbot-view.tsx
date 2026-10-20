@@ -7,6 +7,8 @@ import { Card } from '@/components/ui/card'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { API_BASE } from '@/lib/api-base'
+import { errorMessageForStatus } from '@/lib/api-errors'
+import { toast } from 'sonner'
 import { useDataset } from '@/context/dataset-provider'
 import { useSearchParams } from 'next/navigation'
 
@@ -62,7 +64,10 @@ export function DatasetChatbotView() {
           return
         }
 
-        if (!res.ok) throw new Error(`GET /chat ${res.status}`)
+        if (!res.ok) {
+          if (res.status !== 404) toast.error(errorMessageForStatus(res.status))
+          throw new Error(`GET /chat ${res.status}`)
+        }
 
         const data: {
           chat_id: string
@@ -75,7 +80,7 @@ export function DatasetChatbotView() {
         setHasActiveChat(true)
         
       } catch (e) {
-        console.error('Error cargando chat activo:', e)
+        if (e instanceof TypeError) toast.error('Sin conexión con el servidor. Revisa tu red.')
         setHasActiveChat(false)
       } finally {
         setCargandoChat(false)
@@ -104,8 +109,8 @@ export function DatasetChatbotView() {
       setMensajes([])
       setTitulo(data.titulo ?? null)
       setHasActiveChat(true)
-    } catch (e) {
-      console.error('Error iniciando chat:', e)
+    } catch {
+      toast.error('Error en el servidor. Intenta más tarde.')
     } finally {
       setCargandoChat(false)
     }
@@ -120,48 +125,54 @@ export function DatasetChatbotView() {
     setEntrada('')
     setEscribiendo(true)
 
-    const respuesta = await fetch(`${API_BASE}/rag/message`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        dataset_name: datasetSeleccionado,
-        mensaje: limpio
-      }),
-    })
+    try {
+      const respuesta = await fetch(`${API_BASE}/rag/message`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dataset_name: datasetSeleccionado,
+          mensaje: limpio
+        }),
+      })
 
-    if (!respuesta.ok) {
-      console.error('Error al enviar el mensaje:', respuesta.statusText)
-      const err = await respuesta.text().catch(() => '')
-      setMensajes((m) => [...m, { autor: 'asistente', mensaje: `Error: ${respuesta.status} ${err || respuesta.statusText}`, created_at: new Date().toISOString() }])
+      if (!respuesta.ok) {
+        toast.error(errorMessageForStatus(respuesta.status))
+        setMensajes((m) => [...m, { autor: 'asistente', mensaje: 'Ocurrió un error al responder. Intenta de nuevo.', created_at: new Date().toISOString() }])
+        setEscribiendo(false)
+        return
+      }
+
+      const data: {
+        respuesta: { autor: 'usuario' | 'asistente'; mensaje: string; created_at: string };
+        pregunta: { created_at: string };
+        titulo?: string | null;
+      } = await respuesta.json()
+
+      // Si el backend devolvió el mensaje_usuario con created_at real, corrige el optimista
+      if (data.pregunta.created_at) {
+        setMensajes((prev) => {
+          const copy = [...prev]
+          // último usuario es el que acabamos de insertar optimista
+          for (let i = copy.length - 1; i >= 0; i--) {
+            if (copy[i].autor === 'usuario' && copy[i].mensaje === limpio) {
+              copy[i] = { ...copy[i], created_at: data.pregunta!.created_at }
+              break
+            }
+          }
+          return copy
+        })
+      }
+
+      setMensajes((m) => [...m, data.respuesta])
+      if (data.titulo) setTitulo(data.titulo)
+      setEscribiendo(false)
+    } catch {
+      toast.error('Sin conexión con el servidor. Revisa tu red.')
+      setMensajes((m) => [...m, { autor: 'asistente', mensaje: 'Sin conexión con el servidor.', created_at: new Date().toISOString() }])
       setEscribiendo(false)
       return
     }
-
-    const data: { 
-      respuesta: { autor: 'usuario' | 'asistente'; mensaje: string; created_at: string }; 
-      pregunta: { created_at: string };
-      titulo?: string | null;
-    } = await respuesta.json()
-
-    // Si el backend devolvió el mensaje_usuario con created_at real, corrige el optimista
-    if (data.pregunta.created_at) {
-      setMensajes((prev) => {
-        const copy = [...prev]
-        // último usuario es el que acabamos de insertar optimista
-        for (let i = copy.length - 1; i >= 0; i--) {
-          if (copy[i].autor === 'usuario' && copy[i].mensaje === limpio) {
-            copy[i] = { ...copy[i], created_at: data.pregunta!.created_at }
-            break
-          }
-        }
-        return copy
-      })
-    }
-
-    setMensajes((m) => [...m, data.respuesta])
-    if (data.titulo) setTitulo(data.titulo)
-    setEscribiendo(false)
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {

@@ -5,7 +5,8 @@ import { AnalysisRunner } from '@/components/analysis-runner'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { useEffect, useState } from 'react'
 import { useDataset } from '@/context/dataset-provider'
-import { API_BASE } from '@/lib/api-base'
+import { useJobs } from '@/context/jobs-context'
+import { apiFetch } from '@/lib/api-fetch'
 import { EmbeddingsScatter } from '@/components/charts/embeddings-scatter'
 
 type EmbeddingsResponse = {
@@ -23,39 +24,59 @@ export function EmbeddingsView() {
   const [data, setData] = useState<EmbeddingsResponse | null>(null)
 
   const { datasetSeleccionado } = useDataset()
+  const { tasks, startTask, adoptTask, consumeTask } = useJobs()
+  const taskKey = datasetSeleccionado ? `embeddings:${datasetSeleccionado}` : null
+  const task = taskKey ? tasks[taskKey] : undefined
 
-  const ejecutarEmbeddings = async () => {
+  const ejecutarEmbeddings = () => {
+    if (!datasetSeleccionado || !taskKey) return
     setEstado('running')
-    const respuesta = await fetch(API_BASE + '/clustering/visualizeEmbeddings', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dataset: datasetSeleccionado }),
-    })
-    if (!respuesta.ok) {
-      console.error('Error al calcular embeddings:', respuesta.statusText)
-      setEstado('idle')
-      return
-    }
-    const json: EmbeddingsResponse = await respuesta.json()
-    setData(json)
-    setEstado('done')
+    startTask({
+      key: taskKey,
+      service: 'clustering',
+      operation: 'visualizeEmbeddings',
+      jobType: 'embeddings',
+      dataset: datasetSeleccionado,
+      body: { dataset: datasetSeleccionado },
+      successMessage: 'Embeddings calculados correctamente.',
+    }).catch(() => setEstado('idle'))
   }
+
+  useEffect(() => {
+    if (!datasetSeleccionado || !taskKey) return
+    adoptTask({
+      key: taskKey,
+      service: 'clustering',
+      jobType: 'embeddings',
+      dataset: datasetSeleccionado,
+      successMessage: 'Embeddings calculados correctamente.',
+    })
+  }, [datasetSeleccionado])
+
+  useEffect(() => {
+    if (!task || task.consumed) return
+    if (task.status === 'running') {
+      setEstado('running')
+    } else if (task.status === 'succeeded') {
+      setData(task.result as EmbeddingsResponse)
+      setEstado('done')
+      consumeTask(task.key)
+    } else {
+      setEstado('idle')
+      consumeTask(task.key)
+    }
+  }, [task])
 
   useEffect(() => {
     if (!datasetSeleccionado) return
     const fetchData = async () => {
       try {
         setEstado('running')
-        const respuesta = await fetch(API_BASE + '/clustering/getEmbeddingsImage', {
+        const json = await apiFetch<EmbeddingsResponse>('/clustering/getEmbeddingsImage', {
           method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ dataset: datasetSeleccionado }),
-        })
-        if (!respuesta.ok) { setEstado('idle'); return }
-        const json: EmbeddingsResponse = await respuesta.json()
-        if (!json.points) { setEstado('idle'); return }
+        }, { silent: true, ignoreNotFound: true })
+        if (!json?.points) { setEstado('idle'); return }
         setData(json)
         setEstado('done')
       } catch { setEstado('idle') }
@@ -67,7 +88,7 @@ export function EmbeddingsView() {
     <AnalysisRunner
       icon={Sparkles}
       runLabel="Calcular embeddings"
-      idleHint="Genera la representación vectorial de cada mensaje y proyéctala en 2D para observar agrupamientos semánticos."
+      idleHint="Convierte cada mensaje en una representación numérica de su significado y lo ubica en un mapa 2D. Los textos parecidos quedan cerca: sirve para descubrir temas recurrentes y ver de un vistazo cómo se agrupa el contenido del dataset."
       estado={estado}
       ejecutarFuncion={ejecutarEmbeddings}
     >
@@ -75,7 +96,7 @@ export function EmbeddingsView() {
         <CardHeader className="pb-3">
           <div className="flex flex-col gap-1">
             <h3 className="text-sm font-semibold tracking-tight">Proyección 2D — UMAP</h3>
-            <p className="text-xs text-muted-foreground">cosine · 2 componentes · HDBSCAN interactivo</p>
+            <p className="text-xs text-muted-foreground">coseno · 2 componentes · HDBSCAN interactivo</p>
           </div>
         </CardHeader>
         <CardContent className="pt-0">

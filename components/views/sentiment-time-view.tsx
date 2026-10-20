@@ -15,7 +15,6 @@ import {
 } from 'lucide-react'
 
 import { AnalysisRunner } from '@/components/analysis-runner'
-import { API_BASE } from '@/lib/api-base'
 import {
   Card,
   CardContent,
@@ -26,6 +25,9 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { useDataset } from '@/context/dataset-provider'
+import { useJobs } from '@/context/jobs-context'
+import { apiFetch } from '@/lib/api-fetch'
+import { etiquetaEmocion } from '@/lib/emotions'
 
 type Usuario = {
   remitente: string
@@ -71,15 +73,6 @@ const EMOCIONES_ORDEN = [
   'sadness',
   'surprise',
 ]
-
-const EMOCIONES_ETIQUETA: Record<string, string> = {
-  anger: 'Enojo',
-  disgust: 'Disgusto',
-  fear: 'Miedo',
-  joy: 'Alegría',
-  sadness: 'Tristeza',
-  surprise: 'Sorpresa',
-}
 
 const formatearPorcentaje = (valor: number) =>
   `${(Number(valor) * 100).toFixed(1)}%`
@@ -154,36 +147,15 @@ export function SentimentTimeView() {
 
     const cargarUsuarios = async () => {
       try {
-        const res = await fetch(
-          API_BASE + '/evolution/users',
-          {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              dataset: datasetSeleccionado,
-            }),
-          }
-        )
-
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => null)
-          setErrorUsuarios(
-            errorData?.detail ??
-              'No se pudieron obtener los participantes de este dataset.'
-          )
-          return
-        }
-
-        const data = await res.json()
+        const data = await apiFetch<{ usuarios?: Usuario[] }>('/evolution/users', {
+          method: 'POST',
+          body: JSON.stringify({
+            dataset: datasetSeleccionado,
+          }),
+        })
         setUsuarios(Array.isArray(data.usuarios) ? data.usuarios : [])
-      } catch (error) {
-        console.warn('Error de conexión al obtener usuarios:', error)
-        setErrorUsuarios(
-          'No se pudo conectar con el servidor para obtener los participantes.'
-        )
+      } catch {
+        setErrorUsuarios('No se pudieron obtener los participantes de este dataset.')
       } finally {
         setCargandoUsuarios(false)
       }
@@ -210,62 +182,80 @@ export function SentimentTimeView() {
     return `${partes[2]}/${partes[1]}/${partes[0]}`
   }
 
-  const ejecutarEvolucion = async () => {
-    if (!remitenteSeleccionado || !datasetSeleccionado) return
+  const { tasks, startTask, adoptTask, consumeTask } = useJobs()
+  const taskKey =
+    datasetSeleccionado && remitenteSeleccionado
+      ? `emotions-evolution:${datasetSeleccionado}:${remitenteSeleccionado}`
+      : null
+  const task = taskKey ? tasks[taskKey] : undefined
+
+  const aplicarResultado = (data: EvolucionEmociones) => {
+    if (Array.isArray((data as { bloques?: unknown }).bloques)) {
+      const raw = data as unknown as { bloques: BloqueBackend[] } & Record<string, unknown>
+      const periodos: Periodo[] = raw.bloques.map((b, i) => ({
+        etiqueta: b.etiqueta ?? `Bloque ${i + 1}`,
+        fecha_inicio: '',
+        fecha_fin: '',
+        cantidad_mensajes: b.cantidad_mensajes,
+        emotions: b.emotions ?? {},
+      }))
+      setResultado({ ...data, periodos, rango_fechas: undefined })
+    } else {
+      setResultado(data)
+    }
+  }
+
+  const ejecutarEvolucion = () => {
+    if (!remitenteSeleccionado || !datasetSeleccionado || !taskKey) return
 
     setEstado('running')
     setErrorMensaje(null)
 
-    try {
-      const res = await fetch(
-        API_BASE + '/evolution/emotions-evolution',
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            dataset: datasetSeleccionado,
-            remitente: remitenteSeleccionado,
-          }),
-        }
-      )
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null)
-        const mensaje =
-          errorData?.detail ??
-          'Ocurrió un error al calcular la evolución de emociones. Por favor, inténtelo de nuevo.'
-        console.warn('Error al calcular evolución:', mensaje)
-        setErrorMensaje(mensaje)
-        setEstado('idle')
-        return
-      }
-
-      const data = await res.json()
-      if (Array.isArray((data as { bloques?: unknown }).bloques)) {
-        const raw = data as { bloques: BloqueBackend[] } & Record<string, unknown>
-        const periodos: Periodo[] = raw.bloques.map((b, i) => ({
-          etiqueta: b.etiqueta ?? `Bloque ${i + 1}`,
-          fecha_inicio: '',
-          fecha_fin: '',
-          cantidad_mensajes: b.cantidad_mensajes,
-          emotions: b.emotions ?? {},
-        }))
-        setResultado({ ...data, periodos, rango_fechas: undefined })
-      } else {
-        setResultado(data)
-      }
-      setEstado('done')
-    } catch (error) {
-      console.warn('Error de conexión al calcular evolución:', error)
-      setErrorMensaje(
-        'No se pudo conectar con el servidor. Por favor, inténtelo de nuevo.'
-      )
-      setEstado('idle')
-    }
+    startTask({
+      key: taskKey,
+      service: 'evolution',
+      operation: 'emotions-evolution',
+      jobType: 'emotions-evolution',
+      dataset: datasetSeleccionado,
+      body: {
+        dataset: datasetSeleccionado,
+        remitente: remitenteSeleccionado,
+      },
+      successMessage: 'Evolución de emociones calculada correctamente.',
+    }).catch(() => setEstado('idle'))
   }
+
+  useEffect(() => {
+    if (!taskKey || !datasetSeleccionado) return
+    adoptTask({
+      key: taskKey,
+      service: 'evolution',
+      jobType: 'emotions-evolution',
+      dataset: datasetSeleccionado,
+      successMessage: 'Evolución de emociones calculada correctamente.',
+    })
+  }, [taskKey])
+
+  useEffect(() => {
+    if (!task || task.consumed) return
+    if (task.status === 'running') {
+      setEstado('running')
+    } else if (task.status === 'succeeded') {
+      // Solo se aplica si el job es del remitente actual; si no, se libera
+      // igual (el aviso de éxito ya salió y el botón vuelve a habilitarse).
+      const jobRemitente = (task.params as { remitente?: unknown } | null | undefined)?.remitente
+      if (!task.params || jobRemitente === remitenteSeleccionado) {
+        aplicarResultado(task.result as EvolucionEmociones)
+        setEstado('done')
+      } else {
+        setEstado('idle')
+      }
+      consumeTask(task.key)
+    } else {
+      setEstado('idle')
+      consumeTask(task.key)
+    }
+  }, [task])
 
   const handleReset = () => {
     setResultado(null)
@@ -434,8 +424,8 @@ export function SentimentTimeView() {
               runLabel="Ver evolución de emociones"
               idleHint={
                 remitenteSeleccionado
-                  ? `Analiza los mensajes de ${remitenteSeleccionado} y arma una línea de tiempo con el porcentaje de cada emoción por período.`
-                  : 'Seleccioná un participante para ver la evolución de sus emociones a lo largo del tiempo.'
+                  ? `Analiza los mensajes de ${remitenteSeleccionado} y muestra cómo evoluciona su tono emocional (más positivo, neutro o negativo) a lo largo del tiempo. Ayuda a detectar cambios de ánimo sostenidos o momentos de mayor malestar.`
+                  : 'Seleccioná un participante para ver cómo evoluciona su tono emocional a lo largo del tiempo y detectar cambios de ánimo sostenidos o momentos de mayor malestar.'
               }
               estado={estado}
               ejecutarFuncion={ejecutarEvolucion}
@@ -598,8 +588,7 @@ export function SentimentTimeView() {
                                         <p className="text-[11px] text-muted-foreground">
                                           Predomina{' '}
                                           <strong className="font-medium text-foreground">
-                                            {EMOCIONES_ETIQUETA[dominante] ??
-                                              dominante}
+                                            {etiquetaEmocion(dominante)}
                                           </strong>
                                         </p>
                                       )}
@@ -615,8 +604,7 @@ export function SentimentTimeView() {
                                             className="text-xs font-normal"
                                             title={`Puntaje promedio: ${valor.toFixed(4)}`}
                                           >
-                                            {EMOCIONES_ETIQUETA[emocion] ??
-                                              emocion}
+                                            {etiquetaEmocion(emocion)}
                                             <span className="ml-1 font-medium">
                                               {formatearPorcentaje(valor)}
                                             </span>

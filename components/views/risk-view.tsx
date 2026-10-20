@@ -7,7 +7,6 @@ import { AnalysisRunner } from '@/components/analysis-runner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { API_BASE } from '@/lib/api-base'
 import {
   Select,
   SelectContent,
@@ -27,6 +26,8 @@ import {
 } from '@/components/ui/table'
 import { ChartTooltip } from '@/components/chart-tooltip'
 import { useDataset } from '@/context/dataset-provider'
+import { useJobs } from '@/context/jobs-context'
+import { apiFetch } from '@/lib/api-fetch'
 
 type Nivel = 'nulo' | 'bajo' | 'medio' | 'potencial' | 'alto'
 
@@ -118,43 +119,59 @@ export function RiskView() {
   const [data, setData] = useState<RiskResponse | null>(null)
   const [filtro, setFiltro] = useState<'todos' | Nivel>('todos')
   const { datasetSeleccionado } = useDataset()
+  const { tasks, startTask, adoptTask, consumeTask } = useJobs()
+  const taskKey = datasetSeleccionado ? `risk:${datasetSeleccionado}` : null
+  const task = taskKey ? tasks[taskKey] : undefined
 
-  const ejecutarRiesgo = async () => {
-    if (!datasetSeleccionado) return
+  const ejecutarRiesgo = () => {
+    if (!datasetSeleccionado || !taskKey) return
     setEstado('running')
-    try {
-      const respuesta = await fetch(`${API_BASE}/suicide/analyzeRisk`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dataset: datasetSeleccionado, with_verification: true, top_k: 200 }),
-      })
-      if (!respuesta.ok) throw new Error(respuesta.statusText)
-      setData(await respuesta.json())
-      setEstado('done')
-    } catch (e) {
-      console.error('Error al estimar riesgo:', e)
-      setEstado('idle')
-    }
+    startTask({
+      key: taskKey,
+      service: 'suicide',
+      operation: 'analyzeRisk',
+      jobType: 'risk',
+      dataset: datasetSeleccionado,
+      body: { dataset: datasetSeleccionado, with_verification: true, top_k: 200 },
+      successMessage: 'Nivel de riesgo estimado correctamente.',
+    }).catch(() => setEstado('idle'))
   }
+
+  useEffect(() => {
+    if (!datasetSeleccionado || !taskKey) return
+    adoptTask({
+      key: taskKey,
+      service: 'suicide',
+      jobType: 'risk',
+      dataset: datasetSeleccionado,
+      successMessage: 'Nivel de riesgo estimado correctamente.',
+    })
+  }, [datasetSeleccionado])
+
+  useEffect(() => {
+    if (!task || task.consumed) return
+    if (task.status === 'running') {
+      setEstado('running')
+    } else if (task.status === 'succeeded') {
+      setData(task.result as RiskResponse)
+      setEstado('done')
+      consumeTask(task.key)
+    } else {
+      setEstado('idle')
+      consumeTask(task.key)
+    }
+  }, [task])
 
   useEffect(() => {
     if (!datasetSeleccionado) return
     const cargar = async () => {
       try {
         setEstado('running')
-        const respuesta = await fetch(`${API_BASE}/suicide/getResults`, {
+        const json = await apiFetch<RiskResponse>(`/suicide/getResults`, {
           method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ dataset: datasetSeleccionado }),
-        })
-        if (!respuesta.ok) {
-          setEstado('idle')
-          return
-        }
-        const json: RiskResponse = await respuesta.json()
-        if (!json.resumen) {
+        }, { silent: true, ignoreNotFound: true })
+        if (!json?.resumen) {
           setEstado('idle')
           return
         }
@@ -187,7 +204,7 @@ export function RiskView() {
     <AnalysisRunner
       icon={Gauge}
       runLabel="Estimar nivel de riesgo"
-      idleHint="Aplica la cabeza E5-large + LogReg sobre los embeddings y verifica con RoBERTa los casos altos en inglés."
+      idleHint="Estima el nivel de riesgo suicida de los textos combinando el contenido de los mensajes con un modelo entrenado para esa tarea y revisando con más detalle los casos más preocupantes. Sirve para priorizar qué mensajes conviene mirar primero, como apoyo a la evaluación de un profesional y no como reemplazo."
       estado={estado}
       ejecutarFuncion={ejecutarRiesgo}
     >
@@ -224,7 +241,7 @@ export function RiskView() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Score medio</CardDescription>
+                <CardDescription>Puntaje medio</CardDescription>
                 <CardTitle className="text-2xl">{data.resumen.score_medio}</CardTitle>
               </CardHeader>
               <CardContent className="text-xs text-muted-foreground">
@@ -347,7 +364,7 @@ export function RiskView() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Evidencia</TableHead>
-                    <TableHead className="w-20">Score A</TableHead>
+                    <TableHead className="w-20">Puntaje A</TableHead>
                     <TableHead className="w-20">RoBERTa</TableHead>
                     <TableHead className="w-24">Nivel</TableHead>
                   </TableRow>
@@ -358,9 +375,9 @@ export function RiskView() {
                       <TableCell className="min-w-0">
                         {it.chunk_index != null && (
                           <div className="mb-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-                            <Badge variant="secondary">chunk #{it.chunk_index}</Badge>
+                            <Badge variant="secondary">fragmento #{it.chunk_index}</Badge>
                             <span>
-                              msgs {it.msg_desde}–{it.msg_hasta}
+                              mensajes {it.msg_desde}–{it.msg_hasta}
                             </span>
                             {(it.fecha_desde || it.fecha_hasta) && (
                               <span>

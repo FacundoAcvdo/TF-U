@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { etiquetaEmocion } from '@/lib/emotions'
 
 type DistItem = {
   emotion: string
@@ -18,7 +19,7 @@ function Tooltip({ item, x, y }: { item: DistItem; x: number; y: number }) {
       className="pointer-events-none fixed z-50 rounded-md border bg-popover px-3 py-2.5 text-xs shadow-sm"
       style={{ left: x + 12, top: y + 12 }}
     >
-      <p className="text-sm font-medium capitalize text-foreground">{item.emotion}</p>
+      <p className="text-sm font-medium capitalize text-foreground">{etiquetaEmocion(item.emotion)}</p>
       <div className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1 font-mono text-[11px] text-muted-foreground">
         <span>media {s.mean.toFixed(3)}</span>
         <span>±{s.std.toFixed(3)}</span>
@@ -90,7 +91,7 @@ export function EmotionDistributionChart({ distribution }: Props) {
               onMouseMove={(e) => setHover({ item, x: e.clientX, y: e.clientY })}
               onMouseLeave={() => setHover(null)}
             >
-              <span className="text-sm capitalize text-foreground">{item.emotion}</span>
+              <span className="text-sm capitalize text-foreground">{etiquetaEmocion(item.emotion)}</span>
               <BoxPlotMini item={item} />
               <span className="text-right font-mono text-xs text-foreground">
                 {item.stats.mean.toFixed(3)}
@@ -103,7 +104,7 @@ export function EmotionDistributionChart({ distribution }: Props) {
           <span className="flex items-center gap-1.5"><span className="h-2.5 w-3 rounded-[2px] border bg-muted" /> q25–q75</span>
           <span className="flex items-center gap-1.5"><span className="h-2.5 w-px bg-foreground" /> mediana</span>
           <span className="flex items-center gap-1.5"><span className="size-1.5 rotate-45 border bg-card" style={{ borderColor: 'var(--foreground)' }} /> media</span>
-          <span className="ml-auto font-mono text-[10px]">0 — 1 score</span>
+          <span className="ml-auto font-mono text-[10px]">escala 0 — 1</span>
         </div>
       </div>
       {hover && <Tooltip item={hover.item} x={hover.x} y={hover.y} />}

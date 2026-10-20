@@ -11,7 +11,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { API_BASE } from '@/lib/api-base'
 import {
   Select,
   SelectContent,
@@ -29,6 +28,8 @@ import {
 } from '@/components/ui/dialog'
 
 import { useDataset } from '@/context/dataset-provider'
+import { useJobs } from '@/context/jobs-context'
+import { apiFetch } from '@/lib/api-fetch'
 
 type TopicModelingDocument = {
   document_id: string
@@ -117,30 +118,59 @@ export function TopicsView() {
   const [maxTopics, setMaxTopics] = useState<number>(20)
 
   const { datasetSeleccionado } = useDataset()
+  const { tasks, startTask, adoptTask, consumeTask } = useJobs()
+  const taskKey = datasetSeleccionado ? `topics:${datasetSeleccionado}:${maxTopics}` : null
+  const task = taskKey ? tasks[taskKey] : undefined
 
-  const ejecutarTopicModeling = async () => {
+  const ejecutarTopicModeling = () => {
+    if (!datasetSeleccionado || !taskKey) return
     setEstado('running')
 
-    const respuesta = await fetch(API_BASE + '/topicmodeling/getTopics', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    startTask({
+      key: taskKey,
+      service: 'topicmodeling',
+      operation: 'getTopics',
+      jobType: 'topics',
+      dataset: datasetSeleccionado,
+      body: {
         dataset: datasetSeleccionado,
         max_topics: maxTopics,
-      }),
-    })
-
-    if (!respuesta.ok) {
-      console.error('Error al obtener topicos principales:', respuesta.statusText)
-      setEstado('idle')
-      return
-    }
-
-    setTopics(respuesta.ok ? await respuesta.json() : null)
-
-    setEstado('done')
+      },
+      successMessage: 'Tópicos generados correctamente.',
+    }).catch(() => setEstado('idle'))
   }
+
+  useEffect(() => {
+    if (!datasetSeleccionado || !taskKey) return
+    adoptTask({
+      key: taskKey,
+      service: 'topicmodeling',
+      jobType: 'topics',
+      dataset: datasetSeleccionado,
+      successMessage: 'Tópicos generados correctamente.',
+    })
+  }, [datasetSeleccionado, maxTopics])
+
+  useEffect(() => {
+    if (!task || task.consumed) return
+    if (task.status === 'running') {
+      setEstado('running')
+    } else if (task.status === 'succeeded') {
+      // El job puede haberse iniciado con otro max_topics: solo se aplica
+      // si coincide, si no se libera igual (el aviso de éxito ya salió).
+      const jobMax = Number((task.params as { max_topics?: unknown } | null | undefined)?.max_topics)
+      if (!task.params || !Number.isFinite(jobMax) || jobMax === maxTopics) {
+        setTopics(task.result as TopicModelingResult)
+        setEstado('done')
+      } else {
+        setEstado('idle')
+      }
+      consumeTask(task.key)
+    } else {
+      setEstado('idle')
+      consumeTask(task.key)
+    }
+  }, [task])
 
   useEffect(() => {
     if (!datasetSeleccionado) {
@@ -153,22 +183,14 @@ export function TopicsView() {
       try {
         setEstado('running')
         setSelectedTopicId(null)
-        const respuesta = await fetch(API_BASE + '/topicmodeling/getTopicResults', {
+        const json = await apiFetch<TopicModelingResult>('/topicmodeling/getTopicResults', {
           method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             dataset: datasetSeleccionado,
             max_topics: maxTopics,
           }),
-        })
-        if (!respuesta.ok) {
-          setTopics(null)
-          setEstado('idle')
-          return
-        }
-        const json: TopicModelingResult = await respuesta.json()
-        if (!json.topics) {
+        }, { silent: true, ignoreNotFound: true })
+        if (!json?.topics) {
           setTopics(null)
           setEstado('idle')
           return
@@ -235,7 +257,7 @@ export function TopicsView() {
       <AnalysisRunner
         icon={Layers}
         runLabel="Extraer tópicos"
-        idleHint="Aplica modelado de tópicos con BERTopic sobre el corpus para descubrir los temas latentes y sus términos representativos."
+        idleHint="Detecta automáticamente los temas principales presentes en los textos, agrupando los mensajes por asunto y mostrando las palabras más representativas de cada tema. Sirve para descubrir de qué se habla en un corpus grande sin necesidad de leerlo completo."
         estado={estado}
         ejecutarFuncion={ejecutarTopicModeling}
       >
@@ -300,7 +322,7 @@ export function TopicsView() {
 
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      Outliers
+                      Atípicos
                     </p>
 
                     <p className="text-2xl font-semibold">
@@ -355,7 +377,7 @@ export function TopicsView() {
                     <div className="flex items-start gap-4 pr-8">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-3">
-                          <DialogTitle>{selectedTopic.title ?? `Topic ${selectedTopic.topic_id + 1}`}</DialogTitle>
+                          <DialogTitle>{selectedTopic.title ?? `Tópico ${selectedTopic.topic_id + 1}`}</DialogTitle>
                           <Badge variant="secondary">
                             {selectedTopic.percentage.toFixed(1)}%
                           </Badge>
@@ -426,7 +448,7 @@ function TopicRanking({
     <button
       type="button"
       onClick={onClick}
-      aria-label={`Ver detalles del topic ${topic.topic_id + 1}`}
+      aria-label={`Ver detalles del tópico ${topic.topic_id + 1}`}
       className={[
         'group w-full cursor-pointer rounded-lg border p-4 text-left',
         'transition-all duration-150',

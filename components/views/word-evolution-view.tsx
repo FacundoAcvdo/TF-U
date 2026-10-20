@@ -15,7 +15,6 @@ import {
 } from 'lucide-react'
 
 import { AnalysisRunner } from '@/components/analysis-runner'
-import { API_BASE } from '@/lib/api-base'
 import {
   Card,
   CardContent,
@@ -26,6 +25,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { useDataset } from '@/context/dataset-provider'
+import { useJobs } from '@/context/jobs-context'
+import { apiFetch } from '@/lib/api-fetch'
 
 type Usuario = {
   remitente: string
@@ -103,36 +104,15 @@ export function WordEvolutionView() {
 
     const cargarUsuarios = async () => {
       try {
-        const res = await fetch(
-          API_BASE + '/evolution/users',
-          {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              dataset: datasetSeleccionado,
-            }),
-          }
-        )
-
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => null)
-          setErrorUsuarios(
-            errorData?.detail ??
-              'No se pudieron obtener los participantes de este dataset.'
-          )
-          return
-        }
-
-        const data = await res.json()
+        const data = await apiFetch<{ usuarios?: Usuario[] }>('/evolution/users', {
+          method: 'POST',
+          body: JSON.stringify({
+            dataset: datasetSeleccionado,
+          }),
+        })
         setUsuarios(Array.isArray(data.usuarios) ? data.usuarios : [])
-      } catch (error) {
-        console.warn('Error de conexión al obtener usuarios:', error)
-        setErrorUsuarios(
-          'No se pudo conectar con el servidor para obtener los participantes.'
-        )
+      } catch {
+        setErrorUsuarios('No se pudieron obtener los participantes de este dataset.')
       } finally {
         setCargandoUsuarios(false)
       }
@@ -159,63 +139,81 @@ export function WordEvolutionView() {
     return `${partes[2]}/${partes[1]}/${partes[0]}`
   }
 
-  const ejecutarEvolucion = async () => {
-    if (!remitenteSeleccionado || !datasetSeleccionado) return
+  const { tasks, startTask, adoptTask, consumeTask } = useJobs()
+  const taskKey =
+    datasetSeleccionado && remitenteSeleccionado
+      ? `word-evolution:${datasetSeleccionado}:${remitenteSeleccionado}`
+      : null
+  const task = taskKey ? tasks[taskKey] : undefined
+
+  const aplicarResultado = (data: EvolucionPalabras) => {
+    if (Array.isArray((data as { bloques?: unknown }).bloques)) {
+      const raw = data as unknown as { bloques: Bloque[] }
+      const periodos: Periodo[] = raw.bloques.map((b, i) => ({
+        etiqueta: `Partición ${i + 1}`,
+        fecha_inicio: '',
+        fecha_fin: '',
+        cantidad_mensajes: b.cantidad_mensajes,
+        palabras_top: b.palabras_top,
+      }))
+      setResultado({ ...data, periodos, rango_fechas: undefined })
+    } else {
+      setResultado(data)
+    }
+  }
+
+  const ejecutarEvolucion = () => {
+    if (!remitenteSeleccionado || !datasetSeleccionado || !taskKey) return
 
     setEstado('running')
     setErrorMensaje(null)
 
-    try {
-      const res = await fetch(
-        API_BASE + '/evolution/word-evolution',
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            dataset: datasetSeleccionado,
-            remitente: remitenteSeleccionado,
-            top_k: 10,
-          }),
-        }
-      )
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null)
-        const mensaje =
-          errorData?.detail ??
-          'Ocurrió un error al calcular la evolución de palabras. Por favor, inténtelo de nuevo.'
-        console.warn('Error al calcular evolución:', mensaje)
-        setErrorMensaje(mensaje)
-        setEstado('idle')
-        return
-      }
-
-      const data = await res.json()
-      if (Array.isArray((data as { bloques?: unknown }).bloques)) {
-        const raw = data as { bloques: Bloque[] }
-        const periodos: Periodo[] = raw.bloques.map((b, i) => ({
-          etiqueta: `Partición ${i + 1}`,
-          fecha_inicio: '',
-          fecha_fin: '',
-          cantidad_mensajes: b.cantidad_mensajes,
-          palabras_top: b.palabras_top,
-        }))
-        setResultado({ ...data, periodos, rango_fechas: undefined })
-      } else {
-        setResultado(data)
-      }
-      setEstado('done')
-    } catch (error) {
-      console.warn('Error de conexión al calcular evolución:', error)
-      setErrorMensaje(
-        'No se pudo conectar con el servidor. Por favor, inténtelo de nuevo.'
-      )
-      setEstado('idle')
-    }
+    startTask({
+      key: taskKey,
+      service: 'evolution',
+      operation: 'word-evolution',
+      jobType: 'word-evolution',
+      dataset: datasetSeleccionado,
+      body: {
+        dataset: datasetSeleccionado,
+        remitente: remitenteSeleccionado,
+        top_k: 10,
+      },
+      successMessage: 'Evolución de palabras calculada correctamente.',
+    }).catch(() => setEstado('idle'))
   }
+
+  useEffect(() => {
+    if (!taskKey || !datasetSeleccionado) return
+    adoptTask({
+      key: taskKey,
+      service: 'evolution',
+      jobType: 'word-evolution',
+      dataset: datasetSeleccionado,
+      successMessage: 'Evolución de palabras calculada correctamente.',
+    })
+  }, [taskKey])
+
+  useEffect(() => {
+    if (!task || task.consumed) return
+    if (task.status === 'running') {
+      setEstado('running')
+    } else if (task.status === 'succeeded') {
+      // Solo se aplica si el job es del remitente actual; si no, se libera
+      // igual (el aviso de éxito ya salió y el botón vuelve a habilitarse).
+      const jobRemitente = (task.params as { remitente?: unknown } | null | undefined)?.remitente
+      if (!task.params || jobRemitente === remitenteSeleccionado) {
+        aplicarResultado(task.result as EvolucionPalabras)
+        setEstado('done')
+      } else {
+        setEstado('idle')
+      }
+      consumeTask(task.key)
+    } else {
+      setEstado('idle')
+      consumeTask(task.key)
+    }
+  }, [task])
 
   const handleReset = () => {
     setResultado(null)
@@ -384,8 +382,8 @@ export function WordEvolutionView() {
               runLabel="Ver evolución de palabras"
               idleHint={
                 remitenteSeleccionado
-                  ? `Analiza los mensajes de ${remitenteSeleccionado} y arma una línea de tiempo con sus palabras más usadas por período.`
-                  : 'Seleccioná un participante para ver la evolución de sus palabras más usadas a lo largo del tiempo.'
+                  ? `Analiza los mensajes de ${remitenteSeleccionado} y arma una línea de tiempo con sus palabras más usadas en cada período. Sirve para ver cómo cambia su vocabulario con el tiempo y detectar cambios de tema o de estado de ánimo.`
+                  : 'Seleccioná un participante para ver cómo cambian sus palabras más usadas a lo largo del tiempo y detectar cambios de tema o de estado de ánimo.'
               }
               estado={estado}
               ejecutarFuncion={ejecutarEvolucion}

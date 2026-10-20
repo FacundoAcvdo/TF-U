@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Upload,
   FileText,
@@ -42,9 +42,11 @@ import {
 
 import { previewDataset } from '@/lib/dataset/preview'
 import type { DatasetPreviewData } from '@/lib/dataset/types'
+import { etiquetaTipoColumna } from '@/lib/dataset/types'
 import type { AutoConvertSourceFormat } from '@/lib/dataset/autoConvert'
 import { obtenerFormatoOriginal } from '@/lib/dataset/autoConvert'
-import { subirDataset } from '@/lib/dataset/upload'
+import { buildUploadFormData } from '@/lib/dataset/upload'
+import { useJobs } from '@/context/jobs-context'
 import type { WhatsappLocale } from '@/lib/dataset/parsers/txt'
 import { detectWhatsappLocale } from '@/lib/dataset/parsers/txt'
 
@@ -155,6 +157,37 @@ export function UploadView() {
 
   const [archivoOriginalTxt, setArchivoOriginalTxt] =
     useState<File | null>(null)
+
+  const { tasks, startTask, adoptTask, consumeTask } = useJobs()
+  // Key fija: una sola carga a la vez. Al volver a la pantalla, si hay una
+  // carga en curso se muestra "cargando" y no se permite otra ejecución.
+  const taskKey = 'upload'
+  const task = tasks[taskKey]
+
+  // Al montar: lista fresca + retomar carga en curso (si existe).
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['datasets'] })
+    adoptTask({
+      key: taskKey,
+      service: 'dataset',
+      jobType: 'upload',
+      successMessage: 'Dataset cargado correctamente.',
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!task || task.consumed) return
+    if (task.status === 'running') {
+      setEstado('cargando')
+    } else if (task.status === 'succeeded') {
+      queryClient.invalidateQueries({ queryKey: ['datasets'] })
+      setEstado('listo')
+      consumeTask(task.key)
+    } else {
+      setEstado('idle')
+      consumeTask(task.key)
+    }
+  }, [task])
 
   function manejarArchivoElegido(file: File) {
     const tipo = tipoArchivoEspecial(file)
@@ -346,7 +379,7 @@ export function UploadView() {
     try {
       const archivoAEnviar = archivoConvertido ?? archivo
 
-      await subirDataset({
+      const formData = buildUploadFormData({
         archivo: archivoAEnviar,
         columnaTexto,
         columnaClase: sinClasificar ? null : columnaClase || null,
@@ -356,18 +389,17 @@ export function UploadView() {
         formatoDetectado: formatoAutomatico,
         formatoFecha: esDeChat && columnaFecha ? whatsappLocale : null,
         esChat: esDeChat,
-      }, queryClient)
+      })
 
-      setEstado('listo')
-    } catch (err) {
-      console.error(err)
-
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'No se pudo subir el dataset'
-      )
-
+      await startTask({
+        key: taskKey,
+        service: 'dataset',
+        operation: 'uploadDataset',
+        jobType: 'upload',
+        formData,
+        successMessage: 'Dataset cargado correctamente.',
+      })
+    } catch {
       setEstado('idle')
     }
   }
@@ -608,7 +640,7 @@ export function UploadView() {
                     {column.name}
                     {' '}
                     <span className="text-muted-foreground">
-                      ({column.type})
+                      ({etiquetaTipoColumna(column.type)})
                     </span>
                   </SelectItem>
                 ))}
@@ -642,7 +674,7 @@ export function UploadView() {
                       {column.name}
                       {' '}
                       <span className="text-muted-foreground">
-                        ({column.type})
+                        ({etiquetaTipoColumna(column.type)})
                       </span>
                     </SelectItem>
                   ))}
@@ -708,7 +740,7 @@ export function UploadView() {
                     {column.name}
                     {' '}
                     <span className="text-muted-foreground">
-                      ({column.type})
+                      ({etiquetaTipoColumna(column.type)})
                     </span>
                   </SelectItem>
                 ))}
@@ -743,7 +775,7 @@ export function UploadView() {
                         {column.name}
                         {' '}
                         <span className="text-muted-foreground">
-                          ({column.type})
+                          ({etiquetaTipoColumna(column.type)})
                         </span>
                       </SelectItem>
                     ))}

@@ -5,7 +5,8 @@ import { AnalysisRunner } from '@/components/analysis-runner'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { useEffect, useState } from 'react'
 import { useDataset } from '@/context/dataset-provider'
-import { API_BASE } from '@/lib/api-base'
+import { useJobs } from '@/context/jobs-context'
+import { apiFetch } from '@/lib/api-fetch'
 import { WordCloudInteractive } from '@/components/charts/wordcloud-interactive'
 
 type WordFreq = {
@@ -33,39 +34,59 @@ export function WordCloudView() {
   const [data, setData] = useState<WordCloudResponse | null>(null)
 
   const { datasetSeleccionado } = useDataset()
+  const { tasks, startTask, adoptTask, consumeTask } = useJobs()
+  const taskKey = datasetSeleccionado ? `wordcloud:${datasetSeleccionado}` : null
+  const task = taskKey ? tasks[taskKey] : undefined
 
-  const ejecutarWordCloud = async () => {
+  const ejecutarWordCloud = () => {
+    if (!datasetSeleccionado || !taskKey) return
     setEstado('running')
-    const respuesta = await fetch(API_BASE + '/wordcloud/visualizeWordCloud', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dataset: datasetSeleccionado }),
-    })
-    if (!respuesta.ok) {
-      console.error('Error al generar nube:', respuesta.statusText)
-      setEstado('idle')
-      return
-    }
-    const json: WordCloudResponse = await respuesta.json()
-    setData(json)
-    setEstado('done')
+    startTask({
+      key: taskKey,
+      service: 'wordcloud',
+      operation: 'visualizeWordCloud',
+      jobType: 'wordcloud',
+      dataset: datasetSeleccionado,
+      body: { dataset: datasetSeleccionado },
+      successMessage: 'Nube de palabras generada correctamente.',
+    }).catch(() => setEstado('idle'))
   }
+
+  useEffect(() => {
+    if (!datasetSeleccionado || !taskKey) return
+    adoptTask({
+      key: taskKey,
+      service: 'wordcloud',
+      jobType: 'wordcloud',
+      dataset: datasetSeleccionado,
+      successMessage: 'Nube de palabras generada correctamente.',
+    })
+  }, [datasetSeleccionado])
+
+  useEffect(() => {
+    if (!task || task.consumed) return
+    if (task.status === 'running') {
+      setEstado('running')
+    } else if (task.status === 'succeeded') {
+      setData(task.result as WordCloudResponse)
+      setEstado('done')
+      consumeTask(task.key)
+    } else {
+      setEstado('idle')
+      consumeTask(task.key)
+    }
+  }, [task])
 
   useEffect(() => {
     if (!datasetSeleccionado) return
     const fetchData = async () => {
       try {
         setEstado('running')
-        const respuesta = await fetch(API_BASE + '/wordcloud/getWordCloudImage', {
+        const json = await apiFetch<WordCloudResponse>('/wordcloud/getWordCloudImage', {
           method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ dataset: datasetSeleccionado }),
-        })
-        if (!respuesta.ok) { setEstado('idle'); return }
-        const json: WordCloudResponse = await respuesta.json()
-        if (!json.frequencies) { setEstado('idle'); return }
+        }, { silent: true, ignoreNotFound: true })
+        if (!json?.frequencies) { setEstado('idle'); return }
         setData(json)
         setEstado('done')
       } catch { setEstado('idle') }
@@ -77,7 +98,7 @@ export function WordCloudView() {
     <AnalysisRunner
       icon={Cloud}
       runLabel="Generar nube de palabras"
-      idleHint="Extrae los términos más frecuentes del dataset (sin stopwords, min 3 letras) y visualízalos de forma interactiva."
+      idleHint="Muestra de forma visual las palabras que más se repiten en el conjunto de textos: cuanto más frecuente es una palabra, más grande se ve. Es una forma rápida de reconocer qué conceptos dominan, ideal para una primera exploración o para ilustrar resultados."
       estado={estado}
       ejecutarFuncion={ejecutarWordCloud}
     >
@@ -86,7 +107,7 @@ export function WordCloudView() {
           <div className="flex flex-col gap-1">
             <h3 className="text-sm font-semibold tracking-tight">Nube de palabras</h3>
             <p className="text-xs text-muted-foreground">
-              {data ? `${data.documents_processed} docs · ${data.total_words.toLocaleString()} palabras · top ${data.frequencies.length}` : 'top 200 términos'}
+              {data ? `${data.documents_processed} documentos · ${data.total_words.toLocaleString()} palabras · ${data.frequencies.length} principales` : '200 términos principales'}
             </p>
           </div>
         </CardHeader>

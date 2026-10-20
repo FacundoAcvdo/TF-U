@@ -15,19 +15,26 @@ function TooltipContent({ active, payload, label }: any) {
       <p className="font-medium text-foreground">{label}</p>
       <div className="mt-1 space-y-0.5 font-mono text-muted-foreground">
         {payload.map((p: any) => (
-          <p key={p.dataKey}>{p.dataKey}: <span className="text-foreground">{p.value}</span></p>
+          <p key={p.dataKey}>{METRIC_LABEL[p.dataKey] ?? p.dataKey}: <span className="text-foreground">{p.value}</span></p>
         ))}
       </div>
     </div>
   )
 }
 
+const METRIC_LABEL: Record<string, string> = {
+  texto: 'Textos',
+  words: 'Palabras',
+  sentences: 'Oraciones',
+  vocabulary: 'Vocabulario',
+}
+
 const METRIC_OPTIONS = [
-  { label: 'Todos', value: 'all' },
+  { label: 'Todos', value: 'Todos' },
   { label: 'Textos', value: 'texto' },
-  { label: 'Words', value: 'words' },
-  { label: 'Sentences', value: 'sentences' },
-  { label: 'Vocabulary', value: 'vocabulary' },
+  { label: 'Palabras', value: 'words' },
+  { label: 'Oraciones', value: 'sentences' },
+  { label: 'Vocabulario', value: 'vocabulary' },
 ] as const
 
 const METRIC_COLOR: Record<string, string> = {
@@ -38,14 +45,14 @@ const METRIC_COLOR: Record<string, string> = {
 }
 
 export function EdaClassDistribution({ classStats }: Props) {
-  const [metric, setMetric] = useState<'all' | 'texto' | 'words' | 'sentences' | 'vocabulary'>('all')
+  const [metric, setMetric] = useState<'Todos' | 'texto' | 'words' | 'sentences' | 'vocabulary'>('Todos')
   if (!classStats?.length) return <p className="text-sm text-muted-foreground">Sin datos</p>
 
   return (
     <div className="w-full rounded-lg border bg-card p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
         <h4 className="text-xs font-medium text-muted-foreground">
-          {metric === 'all' ? 'Distribución por clase (escala lineal, hover para valores)' : `Distribución por clase — ${metric}`}
+          {metric === 'Todos' ? 'Distribución por clase (escala lineal, al pasar el cursor para valores)' : `Distribución por clase — ${METRIC_LABEL[metric] ?? metric}`}
         </h4>
         <Select value={metric} onValueChange={(v) => setMetric(v as any)}>
           <SelectTrigger size="sm" className="w-36 bg-card">
@@ -67,7 +74,7 @@ export function EdaClassDistribution({ classStats }: Props) {
             <XAxis dataKey="clase" tick={{ fontSize: 11, fill: 'var(--foreground)' }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
             <Tooltip content={<TooltipContent />} cursor={{ fill: 'var(--muted)', opacity: 0.15 }} />
-            {metric === 'all' ? (
+            {metric === 'Todos' ? (
               <>
                 <Bar dataKey="texto" fill="var(--chart-1)" radius={[3, 3, 0, 0]} />
                 <Bar dataKey="words" fill="var(--chart-2)" radius={[3, 3, 0, 0]} />
@@ -81,7 +88,7 @@ export function EdaClassDistribution({ classStats }: Props) {
         </ResponsiveContainer>
       </div>
       <p className="mt-1 text-center text-[11px] text-muted-foreground">
-        {metric === 'all' ? 'texto · words · sentences · vocabulary' : `solo ${metric} — escala ajustada`}
+        {metric === 'Todos' ? 'texto · palabras · oraciones · vocabulario' : `solo ${METRIC_LABEL[metric] ?? metric} — escala ajustada`}
       </p>
     </div>
   )
