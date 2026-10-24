@@ -51,7 +51,8 @@ type JobsContextValue = {
 
 const JobsContext = createContext<JobsContextValue | null>(null)
 
-const POLL_MS = 2000
+const POLL_DELAYS_MS = [2000, 4000, 8000, 15000] as const
+const MAX_CONCURRENT_POLLS = 3
 
 async function fetchJob(service: string, jobId: string) {
   const respuesta = await fetch(API_BASE + `/${service}/jobs/${jobId}`, {
@@ -69,51 +70,133 @@ async function fetchJob(service: string, jobId: string) {
 export function JobsProvider({ children }: { children: ReactNode }) {
   const [tasks, setTasks] = useState<Record<string, TaskEntry>>({})
   const tasksRef = useRef(tasks)
-  tasksRef.current = tasks
   // Un mismo job puede estar registrado bajo varias keys (ej. cambio de
   // parámetros con el job en curso): el toast final se muestra una sola vez.
   const notifiedRef = useRef<Set<string>>(new Set())
+  const pollStateRef = useRef(
+    new Map<string, { service: string; jobId: string; attempt: number; nextPollAt: number; inFlight: boolean }>(),
+  )
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pollingRef = useRef(false)
 
   // Polling global: sobrevive a la navegación (el provider vive en el layout).
   // El toast final se muestra aunque el usuario esté en otra pantalla.
   useEffect(() => {
-    const id = setInterval(async () => {
-      const pendientes = Object.values(tasksRef.current).filter((t) => t.status === 'running')
-      for (const t of pendientes) {
-        let job: { status: string; result?: unknown; error_code?: number | null; params?: Record<string, unknown> | null }
-        try {
-          job = await fetchJob(t.service, t.jobId)
-        } catch {
-          continue // error de red transitorio: se reintenta en el próximo ciclo
-        }
-        if (job.status !== 'succeeded' && job.status !== 'failed') continue
-        // La notificación se dispara FUERA del updater de setTasks: hacerlo
-        // dentro provoca un setState en otro componente mientras JobsProvider
-        // renderiza (React lo rechaza).
-        const actual = tasksRef.current[t.key]
-        if (!actual || actual.status !== 'running') continue
-        if (!notifiedRef.current.has(t.jobId)) {
-          notifiedRef.current.add(t.jobId)
-          if (job.status === 'succeeded') toast.success(t.successMessage)
-          else toast.error(errorMessageForJob(job.error_code))
-        }
-        setTasks((prev) => {
-          const current = prev[t.key]
-          if (!current || current.status !== 'running') return prev
-          return {
-            ...prev,
-            [t.key]: {
-              ...current,
-              status: job.status as TaskStatus,
-              result: job.result,
-              errorCode: job.error_code ?? null,
-              params: job.params ?? current.params ?? null,
-            },
-          }
-        })
+    tasksRef.current = tasks
+    const jobKey = (service: string, jobId: string) => `${service}:${jobId}`
+    const syncPollState = () => {
+      const activos = new Map<string, { service: string; jobId: string }>()
+      for (const task of Object.values(tasksRef.current)) {
+        if (task.status === 'running') activos.set(jobKey(task.service, task.jobId), task)
       }
-    }, POLL_MS)
-    return () => clearInterval(id)
+
+      for (const key of pollStateRef.current.keys()) {
+        if (!activos.has(key)) pollStateRef.current.delete(key)
+      }
+      for (const [key, job] of activos) {
+        if (!pollStateRef.current.has(key)) {
+          pollStateRef.current.set(key, {
+            ...job,
+            attempt: 0,
+            nextPollAt: Date.now() + POLL_DELAYS_MS[0],
+            inFlight: false,
+          })
+        }
+      }
+      return activos
+    }
+
+    const scheduleNext = () => {
+      if (!pollingRef.current) return
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
+      const activos = syncPollState()
+      if (activos.size === 0) {
+        pollingRef.current = false
+        pollTimerRef.current = null
+        return
+      }
+
+      const ahora = Date.now()
+      const pendientes = [...pollStateRef.current.values()]
+        .filter((state) => !state.inFlight && state.nextPollAt <= ahora)
+        .slice(0, MAX_CONCURRENT_POLLS)
+      if (pendientes.length > 0) {
+        void poll(pendientes)
+        return
+      }
+
+      const siguiente = Math.min(...[...pollStateRef.current.values()].map((state) => state.nextPollAt))
+      pollTimerRef.current = setTimeout(scheduleNext, Math.max(0, siguiente - ahora))
+    }
+
+    const poll = async (
+      pendientes: { service: string; jobId: string; attempt: number; nextPollAt: number; inFlight: boolean }[],
+    ) => {
+      for (const state of pendientes) state.inFlight = true
+      await Promise.all(
+        pendientes.map(async (state) => {
+          const key = jobKey(state.service, state.jobId)
+          try {
+            const job = await fetchJob(state.service, state.jobId)
+            if (job.status === 'succeeded' || job.status === 'failed') {
+              pollStateRef.current.delete(key)
+              const actuales = Object.values(tasksRef.current).filter(
+                (task) => task.status === 'running' && jobKey(task.service, task.jobId) === key,
+              )
+              const first = actuales[0]
+              if (first && !notifiedRef.current.has(state.jobId)) {
+                notifiedRef.current.add(state.jobId)
+                if (job.status === 'succeeded') toast.success(first.successMessage)
+                else toast.error(errorMessageForJob(job.error_code))
+              }
+              if (actuales.length > 0) {
+                setTasks((prev) => {
+                  const next = { ...prev }
+                  for (const task of actuales) {
+                    const current = next[task.key]
+                    if (!current || current.status !== 'running') continue
+                    next[task.key] = {
+                      ...current,
+                      status: job.status as TaskStatus,
+                      result: job.result,
+                      errorCode: job.error_code ?? null,
+                      params: job.params ?? current.params ?? null,
+                    }
+                  }
+                  return next
+                })
+              }
+              return
+            }
+
+            const current = pollStateRef.current.get(key)
+            if (current) {
+              current.attempt = Math.min(current.attempt + 1, POLL_DELAYS_MS.length - 1)
+              current.nextPollAt = Date.now() + POLL_DELAYS_MS[current.attempt]
+              current.inFlight = false
+            }
+          } catch {
+            const current = pollStateRef.current.get(key)
+            if (current) {
+              current.attempt = Math.min(current.attempt + 1, POLL_DELAYS_MS.length - 1)
+              current.nextPollAt = Date.now() + POLL_DELAYS_MS[current.attempt]
+              current.inFlight = false
+            }
+          }
+        }),
+      )
+      scheduleNext()
+    }
+
+    if (Object.values(tasksRef.current).some((task) => task.status === 'running')) {
+      pollingRef.current = true
+      scheduleNext()
+    }
+  }, [tasks])
+
+  useEffect(() => () => {
+    pollingRef.current = false
+    if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
   }, [])
 
   const startTask = useCallback(async (opts: StartTaskOptions) => {
