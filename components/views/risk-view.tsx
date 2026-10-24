@@ -63,7 +63,7 @@ type RiskResponse = {
 const NIVEL_META: Record<Nivel, { color: string; badge: 'success' | 'secondary' | 'warning' | 'destructive' | 'outline' }> = {
   nulo: { color: '#10b981', badge: 'success' },
   bajo: { color: '#38bdf8', badge: 'secondary' },
-  medio: { color: '#f59e0b', badge: 'warning' },
+  medio: { color: '#f5f10b', badge: 'warning' },
   potencial: { color: '#fb923c', badge: 'warning' },
   alto: { color: '#ef4444', badge: 'destructive' },
 }

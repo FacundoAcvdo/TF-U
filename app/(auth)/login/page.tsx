@@ -65,8 +65,7 @@ function LoginInner() {
           </h1>
           <p className="text-sm leading-relaxed text-sidebar-foreground/70 text-pretty">
             Herramienta de investigación para explorar patrones lingüísticos, emociones y niveles de
-            riesgo en corpus textuales. Está pensada para el ámbito de la salud mental —con foco en la
-            prevención— y también para el análisis general de lenguaje.
+            riesgo en corpus textuales. Pensada para el ámbito de la salud mental y el análisis general de lenguaje.
           </p>
         </div>
 

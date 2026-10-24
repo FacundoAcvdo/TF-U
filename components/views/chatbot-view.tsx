@@ -35,6 +35,8 @@ export function ChatbotView() {
   const [cargandoChat, setCargandoChat] = useState(true)
   const [hasActiveChat, setHasActiveChat] = useState<boolean | null>(null)
   const [titulo, setTitulo] = useState<string | null>(null)
+  const [modoPrivacidad, setModoPrivacidad] = useState(false)
+  const [cambiandoModo, setCambiandoModo] = useState(false)
   const finRef = useRef<HTMLDivElement>(null)
 
   const tituloVisible = titulo?.trim() ? titulo : 'Sin título'
@@ -61,11 +63,13 @@ export function ChatbotView() {
         const data: {
           chat_id: string
           titulo?: string | null
+          privacy_mode?: boolean
           mensajes: { autor: 'usuario' | 'asistente'; mensaje: string; created_at: string }[]
         } = await res.json()
 
         setMensajes(data.mensajes ?? [])
         setTitulo(data.titulo ?? null)
+        setModoPrivacidad(Boolean(data.privacy_mode))
         setHasActiveChat(true)
         
       } catch (e) {
@@ -82,6 +86,28 @@ export function ChatbotView() {
     finRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [mensajes, escribiendo])
 
+  async function cambiarModoPrivacidad(enabled: boolean) {
+    setCambiandoModo(true)
+    try {
+      const res = await fetch(`${API_BASE}/rag/chat/mode`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privacy_mode: enabled }),
+      })
+      if (!res.ok) {
+        toast.error(errorMessageForStatus(res.status))
+        return
+      }
+      setModoPrivacidad(enabled)
+      toast.success(enabled ? 'Modo privacidad activado' : 'Modo estándar activado')
+    } catch {
+      toast.error('Sin conexión con el servidor. Revisa tu red.')
+    } finally {
+      setCambiandoModo(false)
+    }
+  }
+
   async function iniciarNuevoChat() {
     try {
       setCargandoChat(true)
@@ -89,18 +115,20 @@ export function ChatbotView() {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ privacy_mode: modoPrivacidad }),
       })
       if (!res.ok) throw new Error(`POST /chat ${res.status}`)
-      const data: { titulo?: string | null } = await res.json().catch(() => ({}))
+      const data: { titulo?: string | null; privacy_mode?: boolean } = await res.json().catch(() => ({}))
       setMensajes([])
       setTitulo(data.titulo ?? null)
+      setModoPrivacidad(Boolean(data.privacy_mode))
       setHasActiveChat(true)
     } catch {
       toast.error('Error en el servidor. Intenta más tarde.')
     } finally {
       setCargandoChat(false)
     }
+
   }
 
   async function enviar(texto: string) {
@@ -117,7 +145,7 @@ export function ChatbotView() {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mensaje: limpio }),
+        body: JSON.stringify({ mensaje: limpio, privacy_mode: modoPrivacidad }),
       })
 
       if (!respuesta.ok) {
@@ -131,6 +159,7 @@ export function ChatbotView() {
         respuesta: { autor: 'usuario' | 'asistente'; mensaje: string; created_at: string };
         pregunta: { created_at: string };
         titulo?: string | null;
+        privacy_mode?: boolean;
       } = await respuesta.json()
 
       // Si el backend devolvió el mensaje_usuario con created_at real, corrige el optimista
@@ -150,6 +179,7 @@ export function ChatbotView() {
 
       setMensajes((m) => [...m, data.respuesta])
       if (data.titulo) setTitulo(data.titulo)
+      if (typeof data.privacy_mode === 'boolean') setModoPrivacidad(data.privacy_mode)
       setEscribiendo(false)
     } catch {
       toast.error('Sin conexión con el servidor. Revisa tu red.')
@@ -190,7 +220,21 @@ export function ChatbotView() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="truncate text-sm font-medium" title={tituloVisible}>{tituloVisible}</p>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium" title={tituloVisible}>{tituloVisible}</p>
+          <p className="text-xs text-muted-foreground">
+            {modoPrivacidad ? 'Privacidad: Qwen3 local' : 'Modelo configurado del sistema'}
+          </p>
+        </div>
+        <label className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={modoPrivacidad}
+            onChange={(e) => cambiarModoPrivacidad(e.target.checked)}
+            disabled={cambiandoModo || escribiendo}
+          />
+          Privacidad
+        </label>
         <Button
           variant="outline"
           size="sm"

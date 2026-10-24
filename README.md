@@ -135,6 +135,11 @@ Los análisis pesados se ejecutan como jobs en segundo plano:
 
 El polling es global, por lo que continúa aunque el usuario navegue a otra pantalla. Sólo permanece activo mientras haya jobs en ejecución, detiene cada job al llegar a `succeeded` o `failed` y limita a 3 las consultas simultáneas.
 
+En la ventana de chat, cada usuario puede activar **Privacidad**. Esa selección se
+guarda en su chat activo y hace que la respuesta y el título se generen con el modelo
+local Qwen3 vía Ollama; la recuperación conserva `intfloat/multilingual-e5-large`.
+Con el modo desactivado se mantiene el proveedor cloud configurado. Sólo permanece activo mientras haya jobs en ejecución, detiene cada job al llegar a `succeeded` o `failed` y limita a 3 las consultas simultáneas.
+
 ## Notas
 
 - El frontend no guarda credenciales ni claves: solo habla con el gateway.
