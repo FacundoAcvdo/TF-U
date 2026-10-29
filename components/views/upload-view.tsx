@@ -9,6 +9,8 @@ import {
   X,
   MessageCircle,
   Archive,
+  Download,
+  ShieldCheck,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -57,6 +59,31 @@ type PosiblePreviewAutoConvertido = DatasetPreviewData & {
   sourceFormat?: AutoConvertSourceFormat
   notice?: string
   convertedFile?: File
+}
+
+type DiccionarioAnonimizacion = {
+  personas?: Record<string, string[]>
+  emails?: Record<string, string>
+  telefonos?: Record<string, string>
+  ips?: Record<string, string>
+  urls?: Record<string, string>
+}
+
+type EstadisticasAnonimizacion = {
+  documentos?: number
+  documentos_modificados?: number
+  remitentes?: number
+  menciones_remitentes?: number
+  emails?: number
+  telefonos?: number
+  ips?: number
+  urls?: number
+}
+
+type UploadJobResult = {
+  filename?: string
+  anonimizacion?: EstadisticasAnonimizacion
+  diccionario_anonimizacion?: DiccionarioAnonimizacion
 }
 
 const COLUMNAS_FIJAS: Record<
@@ -158,6 +185,12 @@ export function UploadView() {
   const [archivoOriginalTxt, setArchivoOriginalTxt] =
     useState<File | null>(null)
 
+  const [resultadoAnonimizacion, setResultadoAnonimizacion] = useState<{
+    filename: string
+    stats: EstadisticasAnonimizacion
+    diccionario: DiccionarioAnonimizacion
+  } | null>(null)
+
   const { tasks, startTask, adoptTask, consumeTask } = useJobs()
   // Key fija: una sola carga a la vez. Al volver a la pantalla, si hay una
   // carga en curso se muestra "cargando" y no se permite otra ejecución.
@@ -181,6 +214,12 @@ export function UploadView() {
       setEstado('cargando')
     } else if (task.status === 'succeeded') {
       queryClient.invalidateQueries({ queryKey: ['datasets'] })
+      const res = (task.result ?? {}) as UploadJobResult
+      setResultadoAnonimizacion({
+        filename: res.filename || archivo?.name || 'dataset',
+        stats: res.anonimizacion ?? {},
+        diccionario: res.diccionario_anonimizacion ?? {},
+      })
       setEstado('listo')
       consumeTask(task.key)
     } else {
@@ -218,6 +257,7 @@ export function UploadView() {
     setPreview(null)
     setError(null)
     setEstado('idle')
+    setResultadoAnonimizacion(null)
     setFormatoAutomatico(null)
     setArchivoConvertido(null)
     setFormatoOriginal(obtenerFormatoOriginal(file.name))
@@ -366,6 +406,26 @@ export function UploadView() {
     setWhatsappLocale('DMY')
 
     setEstado('idle')
+    setResultadoAnonimizacion(null)
+  }
+
+  function descargarDiccionarioAnonimizacion() {
+    if (!resultadoAnonimizacion) return
+    const { diccionario, filename } = resultadoAnonimizacion
+    if (Object.keys(diccionario).length === 0) return
+
+    const baseName = filename.replace(/\.[^/.]+$/, '')
+    const jsonContent = JSON.stringify(diccionario, null, 2)
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `diccionario_anonimizacion_${baseName}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   async function cargar() {
@@ -375,6 +435,7 @@ export function UploadView() {
 
     setEstado('cargando')
     setError(null)
+    setResultadoAnonimizacion(null)
 
     try {
       const archivoAEnviar = archivoConvertido ?? archivo
@@ -834,18 +895,52 @@ export function UploadView() {
           </Button>
 
           {estado === 'listo' && (
-            <div className="flex flex-col gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/8 p-3 text-sm">
-              <p className="flex items-center gap-2 font-medium text-emerald-700">
-                <Check className="size-4" />
-                Dataset cargado correctamente
-              </p>
+            <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/8 p-3 text-sm">
+                <p className="flex items-center gap-2 font-medium text-emerald-700 dark:text-emerald-400">
+                  <Check className="size-4" />
+                  Dataset cargado correctamente
+                </p>
 
-              <p className="text-muted-foreground">
-                {preview?.totalRows.toLocaleString('es')}{' '}
-                registros ·{' '}
-                {preview?.columns.length} columnas
-                detectadas.
-              </p>
+                <p className="text-muted-foreground">
+                  {preview?.totalRows.toLocaleString('es')}{' '}
+                  registros ·{' '}
+                  {preview?.columns.length} columnas
+                  detectadas.
+                </p>
+              </div>
+
+              {resultadoAnonimizacion && (
+                <div className="flex flex-col gap-2.5 rounded-lg border border-lime-500/35 bg-lime-500/10 p-3 text-sm">
+                  <div className="flex items-center gap-2 font-medium text-lime-800 dark:text-lime-300">
+                    <ShieldCheck className="size-4 shrink-0" />
+                    <span>Anonimización del dataset</span>
+                  </div>
+
+                  {Object.keys(resultadoAnonimizacion.diccionario).length > 0 ? (
+                    <>
+                      <p className="text-xs text-lime-900/80 dark:text-lime-200/80">
+                        Se anonimizaron datos sensibles durante la carga. Podés descargar el diccionario de equivalencias ahora (solo estará disponible hasta que cargues otro dataset).
+                      </p>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={descargarDiccionarioAnonimizacion}
+                        className="w-full border-lime-600/30 bg-lime-500/15 text-lime-900 hover:bg-lime-500/25 dark:border-lime-400/30 dark:text-lime-200 dark:hover:bg-lime-500/25"
+                      >
+                        <Download className="size-3.5" />
+                        Descargar diccionario (.json)
+                      </Button>
+                    </>
+                  ) : (
+                    <p className="text-xs text-lime-900/80 dark:text-lime-200/80">
+                      No se detectaron datos sensibles para anonimizar (el dataset ya se encontraba anonimizado o sin información personal identificable).
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </CardContent>
