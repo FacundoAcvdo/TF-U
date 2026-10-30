@@ -1,6 +1,6 @@
 'use client'
 
-import { Layers, FileText, Hash, AlertCircle, Settings2 } from 'lucide-react'
+import { Layers, FileText, Hash, AlertCircle, Settings2, Shield } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { AnalysisRunner } from '@/components/analysis-runner'
@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -116,6 +117,7 @@ export function TopicsView() {
     useState<number | null>(null)
 
   const [maxTopics, setMaxTopics] = useState<number>(20)
+  const [modoPrivacidad, setModoPrivacidad] = useState<boolean>(false)
 
   const { datasetSeleccionado } = useDataset()
   const { tasks, startTask, adoptTask, consumeTask } = useJobs()
@@ -135,6 +137,7 @@ export function TopicsView() {
       body: {
         dataset: datasetSeleccionado,
         max_topics: maxTopics,
+        privacy_mode: modoPrivacidad,
       },
       successMessage: 'Tópicos generados correctamente.',
     }).catch(() => setEstado('idle'))
@@ -219,40 +222,73 @@ export function TopicsView() {
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardContent className="flex items-center justify-between gap-4 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
-              <Settings2 className="size-4 text-primary" />
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardContent className="flex items-center justify-between gap-4 p-4">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <Settings2 className="size-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium">
+                  Cantidad máxima de tópicos
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Definí un tope para el modelado de tópicos.
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium">
-                Cantidad máxima de tópicos
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Definí un tope para el modelado de tópicos.
-              </p>
-            </div>
-          </div>
 
-          <Select
-            value={String(maxTopics)}
-            onValueChange={(value) => setMaxTopics(Number(value))}
-            disabled={estado === 'running'}
-          >
-            <SelectTrigger className="w-28">
-              <SelectValue placeholder="Máximo" />
-            </SelectTrigger>
-            <SelectContent>
-              {MAX_TOPICS_OPTIONS.map((value) => (
-                <SelectItem key={value} value={String(value)}>
-                  {value}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
+            <div className="ml-auto shrink-0">
+              <Select
+                value={String(maxTopics)}
+                onValueChange={(value) => setMaxTopics(Number(value))}
+                disabled={estado === 'running'}
+              >
+                <SelectTrigger className="w-28">
+                  <SelectValue placeholder="Máximo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MAX_TOPICS_OPTIONS.map((value) => (
+                    <SelectItem key={value} value={String(value)}>
+                      {value}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-center justify-between gap-4 p-4">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <Shield className="size-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium">
+                  Modo privacidad
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {modoPrivacidad
+                    ? 'Privacidad: Qwen3 local · La generación de títulos con el modelo local puede demorar más tiempo.'
+                    : 'Modelo configurado del sistema'}
+                </p>
+              </div>
+            </div>
+
+            <label className="ml-auto flex shrink-0 cursor-pointer items-center gap-2 text-xs text-muted-foreground select-none">
+              <Switch
+                checked={modoPrivacidad}
+                onCheckedChange={(checked) => setModoPrivacidad(checked)}
+                disabled={estado === 'running'}
+              />
+              Privacidad
+            </label>
+          </CardContent>
+        </Card>
+      </div>
 
       <AnalysisRunner
         icon={Layers}

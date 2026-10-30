@@ -181,23 +181,26 @@ export function TermsDialog({ initialTermsAccepted = false }: TermsDialogProps) 
 
           <section className="space-y-1.5">
             <h3 className="font-semibold text-foreground">
-              3. Consultas en Asistentes (RAG): APIs Externas y Modo Local
+              3. Uso de Inteligencia Artificial (RAG y Modelado de Tópicos): APIs Externas y Modo Local
             </h3>
             <ul className="list-disc pl-5 space-y-1">
               <li>
                 <strong>Uso de APIs externas:</strong> En los chatbots de consulta asistidos por
-                inteligencia artificial (sistema RAG), el modo estándar envía las preguntas formuladas,
-                el historial reciente de la conversación y los fragmentos relevantes recuperados a{' '}
-                <strong>APIs de proveedores externos de modelos de lenguaje</strong> (como Google Gemini
-                o Groq) para elaborar las respuestas.
+                inteligencia artificial (sistema RAG) y en la generación automática de títulos del
+                módulo de <em>Modelado de Tópicos</em>, el modo estándar envía las consultas, el
+                historial reciente o los términos y fragmentos representativos a{' '}
+                <strong>APIs de proveedores externos de modelos de lenguaje</strong> (como Groq o Google
+                Gemini) para elaborar las respuestas y etiquetas.
               </li>
               <li>
-                <strong>Modo Privacidad (Modelo Local):</strong> Los asistentes de chat disponen de la
-                opción <strong>&ldquo;Privacidad&rdquo;</strong> (ejecución mediante modelo local). Al
-                activar este modo, tanto las consultas como el contexto recuperado se procesan
+                <strong>Modo Privacidad (Modelo Local):</strong> Tanto los asistentes de chat como el
+                módulo de <em>Modelado de Tópicos</em> disponen de un interruptor de{' '}
+                <strong>&ldquo;Privacidad&rdquo;</strong> (ejecución mediante modelo local Qwen3). Al
+                activar este modo, tanto las consultas como los fragmentos del dataset se procesan
                 íntegramente en la infraestructura local del servidor, sin transmitir información a
-                servicios externos. Es responsabilidad del usuario activar el modo local cuando la
-                confidencialidad o sensibilidad de la consulta así lo requiera.
+                servicios externos (pudiendo requerir un mayor tiempo de procesamiento). Es
+                responsabilidad del usuario activar el modo local cuando la confidencialidad o
+                sensibilidad de los datos así lo requiera.
               </li>
             </ul>
           </section>
@@ -226,10 +229,12 @@ export function TermsDialog({ initialTermsAccepted = false }: TermsDialogProps) 
                 Registros técnicos de ejecución de tareas (<em>jobs</em>) y auditoría de solicitudes
                 asociados a su identificador de usuario.
               </li>
+              <li>
+                <strong>Control y eliminación:</strong> El usuario puede eliminar en cualquier momento
+                sus datasets, vectores e historiales de conversación desde las secciones de{' '}
+                <em>Gestión de Almacenamiento</em> e <em>Historial de Chats</em>.
+              </li>
             </ul>
-            <strong>Control y eliminación:</strong> El usuario puede eliminar en cualquier momento
-              sus datasets, vectores e historiales de conversación desde las secciones de{' '}
-              <em>Gestión de Almacenamiento</em> e <em>Historial de Chats</em>.
           </section>
 
           <section className="space-y-1.5">
@@ -266,8 +271,8 @@ export function TermsDialog({ initialTermsAccepted = false }: TermsDialogProps) 
           <span className="text-xs sm:text-sm leading-snug text-foreground">
             He leído y acepto los Términos y Condiciones de Uso de PLASMA. Comprendo el alcance de la
             anonimización automática, el funcionamiento de las APIs externas frente al modo de
-            privacidad local en los asistentes, y que los resultados del sistema son de carácter
-            orientativo y no constituyen diagnóstico clínico.
+            privacidad local en los asistentes y en el modelado de tópicos, y que los resultados del
+            sistema son de carácter orientativo y no constituyen diagnóstico clínico.
           </span>
         </label>
 
