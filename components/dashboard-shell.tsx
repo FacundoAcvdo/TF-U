@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
 import { AppSidebar } from '@/components/app-sidebar'
+import { TermsDialog } from '@/components/terms-dialog'
 import { viewMeta, getViewIdByPathname } from '@/lib/navigation'
 import { useDataset, useDatasetsQuery } from '@/context/dataset-provider'
 
@@ -32,9 +33,14 @@ import { Button } from '@/components/ui/button'
 type DashboardShellProps = {
   children: React.ReactNode
   userEmail?: string
+  initialTermsAccepted?: boolean
 }
 
-export function DashboardShell({ children, userEmail = 'usuario@demo.local' }: DashboardShellProps) {
+export function DashboardShell({
+  children,
+  userEmail = 'usuario@demo.local',
+  initialTermsAccepted = false,
+}: DashboardShellProps) {
   const [menuAbierto, setMenuAbierto] = useState(false)
   const pathname = usePathname()
 
@@ -46,6 +52,8 @@ export function DashboardShell({ children, userEmail = 'usuario@demo.local' }: D
 
   return (
     <div className="flex min-h-dvh bg-background">
+      <TermsDialog initialTermsAccepted={initialTermsAccepted} />
+
       {/* Sidebar de escritorio */}
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-sidebar-border lg:block">
         <AppSidebar userEmail={userEmail} />

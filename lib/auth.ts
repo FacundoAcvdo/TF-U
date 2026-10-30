@@ -2,6 +2,7 @@ export type AuthUser = {
   email: string
   sub: string
   exp?: number
+  termsAccepted?: boolean
 }
 
 function decodePayload(token: string): Record<string, unknown> | null {
@@ -40,7 +41,13 @@ export function getUserFromToken(token: string | undefined | null): AuthUser | n
   const sub = (payload.sub as string) || (payload.user_id as string) || ''
   if (!email && !sub) return null
 
-  return { email: email || sub, sub, exp }
+  const appMetadata =
+    payload.app_metadata && typeof payload.app_metadata === 'object'
+      ? (payload.app_metadata as Record<string, unknown>)
+      : undefined
+  const termsAccepted = appMetadata?.terms_accepted === true
+
+  return { email: email || sub, sub, exp, termsAccepted }
 }
 
 export function isTokenExpired(token: string | undefined | null): boolean {

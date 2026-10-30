@@ -12,10 +12,13 @@ export default async function DashboardLayout({
   const token = cookieStore.get('access_token')?.value
   const user = getUserFromToken(token)
   const userEmail = user?.email || 'usuario@demo.local'
+  const initialTermsAccepted = Boolean(user?.termsAccepted)
 
   return (
     <Providers>
-      <DashboardShell userEmail={userEmail}>{children}</DashboardShell>
+      <DashboardShell userEmail={userEmail} initialTermsAccepted={initialTermsAccepted}>
+        {children}
+      </DashboardShell>
     </Providers>
   )
 }
