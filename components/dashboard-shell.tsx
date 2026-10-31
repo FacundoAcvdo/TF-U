@@ -20,13 +20,13 @@ import {
 } from '@/components/ui/dialog'
 
 import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from '@/components/ui/combobox'
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 import { Button } from '@/components/ui/button'
 
@@ -104,19 +104,31 @@ export function DashboardShell({
                         Selecciona el dataset con el que deseas realizar las funciones.
                       </DialogDescription>
                     </DialogHeader>
-                    <Combobox items={datasets?.map((d) => d.dataset_name) || []} value={datasetSeleccionado} onValueChange={setDatasetSeleccionado}>
-                      <ComboboxInput placeholder="Selecciona un dataset" />
-                      <ComboboxContent>
-                        <ComboboxEmpty>No hay datasets disponibles.</ComboboxEmpty>
-                        <ComboboxList>
-                          {(item: string) => (
-                            <ComboboxItem key={item} value={item}>
-                              {item}
-                            </ComboboxItem>
+                    <Select
+                      value={datasetSeleccionado || undefined}
+                      onValueChange={(val) => {
+                        if (val && val !== '_empty') setDatasetSeleccionado(val)
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecciona un dataset" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {datasets && datasets.length > 0 ? (
+                            datasets.map((d) => (
+                              <SelectItem key={d.dataset_id} value={d.dataset_name}>
+                                {d.dataset_name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="_empty" disabled>
+                              No hay datasets disponibles.
+                            </SelectItem>
                           )}
-                        </ComboboxList>
-                      </ComboboxContent>
-                    </Combobox>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
                     <DialogFooter>
                       <DialogClose render={<Button>Seleccionar</Button>} />
                       <DialogClose render={<Button variant="outline">Cancelar</Button>} />

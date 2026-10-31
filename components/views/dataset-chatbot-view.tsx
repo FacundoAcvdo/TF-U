@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Send, MessageCircle, Plus } from 'lucide-react'
+import { Send, MessageCircle, Plus, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { Switch } from '@/components/ui/switch'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { API_BASE } from '@/lib/api-base'
@@ -238,21 +239,7 @@ export function DatasetChatbotView() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium" title={tituloVisible}>{tituloVisible}</p>
-          <p className="text-xs text-muted-foreground">
-            {modoPrivacidad ? 'Privacidad: Qwen3 local' : 'Modelo configurado del sistema'}
-          </p>
-        </div>
-        <label className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-          <input
-            type="checkbox"
-            checked={modoPrivacidad}
-            onChange={(e) => cambiarModoPrivacidad(e.target.checked)}
-            disabled={cambiandoModo || escribiendo}
-          />
-          Privacidad
-        </label>
+        <p className="truncate text-sm font-medium" title={tituloVisible}>{tituloVisible}</p>
         <Button
           variant="outline"
           size="sm"
@@ -264,7 +251,37 @@ export function DatasetChatbotView() {
           Nueva sesión
         </Button>
       </div>
-      <Card className="flex h-[calc(100dvh-13rem)] flex-col overflow-hidden">
+
+      <Card>
+        <CardContent className="flex items-center justify-between gap-4 p-4">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <Shield className="size-4 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium">
+                Modo privacidad
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {modoPrivacidad
+                  ? 'Privacidad: Qwen3 local'
+                  : 'Modelo configurado del sistema'}
+              </p>
+            </div>
+          </div>
+
+          <label className="ml-auto flex shrink-0 cursor-pointer items-center gap-2 text-xs text-muted-foreground select-none">
+            <Switch
+              checked={modoPrivacidad}
+              onCheckedChange={(checked) => cambiarModoPrivacidad(checked)}
+              disabled={cambiandoModo || escribiendo}
+            />
+            Privacidad
+          </label>
+        </CardContent>
+      </Card>
+
+      <Card className="flex h-[calc(100dvh-17.5rem)] flex-col overflow-hidden">
         <div className="flex-1 space-y-4 overflow-y-auto p-5">
         {mensajes.length === 0 && !escribiendo && (
           <p className="text-center text-sm text-muted-foreground py-8">Sin mensajes. Escribe tu primera consulta.</p>
